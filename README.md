@@ -2,6 +2,8 @@
 
 Simulation 3D interactive du système solaire avec les **positions réelles des astres calculées en temps réel** (bibliothèque [astronomy-engine](https://github.com/cosinekitty/astronomy), précision de qualité astronomique, sans connexion internet).
 
+**🚀 Démo en ligne : [med34000.github.io/systeme-solaire-3d](https://med34000.github.io/systeme-solaire-3d/)**
+
 ## Lancer l'application
 
 **Double-clique sur `lancer.command`** — ça démarre un petit serveur local et ouvre ton navigateur.
