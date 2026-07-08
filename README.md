@@ -19,9 +19,17 @@ python3 -m http.server 8123
 
 ## Contenu
 
-- ☀️ Le Soleil, les 8 planètes (avec anneaux de Saturne et d'Uranus)
+- ☀️ Le Soleil, les 8 planètes (avec anneaux de Saturne et d'Uranus) — **vraies textures** issues de l'imagerie NASA
 - 🌙 La Lune, les 4 lunes galiléennes de Jupiter (Io, Europe, Ganymède, Callisto) et Titan
-- ⭐ 4 500 étoiles en toile de fond
+- ⭐ Panorama réel de la Voie lactée + 4 500 étoiles en toile de fond
+
+## 📅 Événements à venir
+
+Le bouton « Événements à venir » calcule les prochains rendez-vous célestes à partir de la date simulée : éclipses de Soleil et de Lune, oppositions de Mars/Jupiter/Saturne, meilleures visibilités de Mercure et Vénus, phases de la Lune, et le survol de l'astéroïde Apophis en 2029. Chaque événement a un bouton « ▶ Voir » qui téléporte la simulation à la date exacte.
+
+## 🌃 Ce soir dans le ciel
+
+Le bouton « Ce soir dans le ciel » montre, pour ta position (géolocalisation ou Montpellier par défaut), quelles planètes sont au-dessus de l'horizon **en ce moment** : direction (N/SE/O…), hauteur, magnitude, heures de lever/coucher, phase de la Lune et coucher du soleil. Fonctionne aussi à n'importe quelle date simulée.
 
 ## Commandes
 
@@ -53,3 +61,11 @@ Astuce : combine avec une vitesse élevée (1 s = 1 mois ou 1 an) pour bien voir
 - Les **distances sont compressées** (loi de puissance) pour que tout reste visible — à l'échelle réelle, Neptune serait invisible à 6 000 fois le rayon du Soleil affiché.
 - Titan : orbite circulaire approchée (non fournie par astronomy-engine).
 - Les distances affichées dans les fiches (Distance au Soleil / à la Terre) sont les **vraies distances**, mises à jour en direct.
+- Événements célestes (éclipses, oppositions, élongations, phases lunaires) et positions dans le ciel local : calculés par astronomy-engine, précision de quelques minutes.
+
+## Crédits
+
+- Calculs astronomiques : [astronomy-engine](https://github.com/cosinekitty/astronomy) (MIT) par Don Cross
+- Rendu 3D : [Three.js](https://threejs.org/) (MIT)
+- Textures des planètes et de la Voie lactée : [Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0), d'après l'imagerie NASA
+- Textures des petites lunes : procédurales (dessinées par le code)

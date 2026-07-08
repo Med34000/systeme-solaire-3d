@@ -1,5 +1,30 @@
-// Textures procédurales dessinées sur canvas — aucun fichier externe nécessaire.
+// Textures des astres. Les planètes, le Soleil et la Lune utilisent les vraies
+// images (Solar System Scope, CC BY 4.0, d'après l'imagerie NASA) ; les petites
+// lunes gardent des textures procédurales dessinées sur canvas.
 import * as THREE from 'three';
+
+export const loadingManager = new THREE.LoadingManager();
+const loader = new THREE.TextureLoader(loadingManager);
+
+const REAL_TEXTURES = {
+  Sun: 'textures/2k_sun.jpg',
+  Mercury: 'textures/2k_mercury.jpg',
+  Venus: 'textures/2k_venus_atmosphere.jpg',
+  Earth: 'textures/2k_earth_daymap.jpg',
+  Mars: 'textures/2k_mars.jpg',
+  Jupiter: 'textures/2k_jupiter.jpg',
+  Saturn: 'textures/2k_saturn.jpg',
+  Uranus: 'textures/2k_uranus.jpg',
+  Neptune: 'textures/2k_neptune.jpg',
+  Moon: 'textures/2k_moon.jpg',
+};
+
+function realTexture(path) {
+  const t = loader.load(path);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
 
 function makeTexture(w, h, draw) {
   const c = document.createElement('canvas');
@@ -168,30 +193,29 @@ const generators = {
 };
 
 export function bodyTexture(key) {
+  if (REAL_TEXTURES[key]) return realTexture(REAL_TEXTURES[key]);
   const gen = generators[key] || generators.Moon;
   return makeTexture(512, 256, gen);
 }
 
-// Texture radiale des anneaux de Saturne (u = position radiale)
+// Panorama réel de la Voie lactée en toile de fond
+export function milkyWayTexture() {
+  const t = realTexture('textures/2k_stars_milky_way.jpg');
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  return t;
+}
+
+// Texture radiale des anneaux (u = position radiale).
+// Saturne : vraie texture avec division de Cassini — Uranus : dégradé procédural.
 export function ringTexture(faint = false) {
+  if (!faint) return realTexture('textures/2k_saturn_ring_alpha.png');
   return makeTexture(512, 8, (ctx, w, h) => {
     const g = ctx.createLinearGradient(0, 0, w, 0);
-    if (faint) {
-      g.addColorStop(0, 'rgba(150,170,180,0)');
-      g.addColorStop(0.3, 'rgba(150,170,180,0.25)');
-      g.addColorStop(0.5, 'rgba(170,190,200,0.1)');
-      g.addColorStop(0.8, 'rgba(160,180,190,0.3)');
-      g.addColorStop(1, 'rgba(150,170,180,0)');
-    } else {
-      g.addColorStop(0.00, 'rgba(120,105,80,0)');
-      g.addColorStop(0.08, 'rgba(150,130,100,0.45)');   // anneau C
-      g.addColorStop(0.25, 'rgba(215,195,155,0.9)');    // anneau B (dense)
-      g.addColorStop(0.45, 'rgba(235,215,175,0.95)');
-      g.addColorStop(0.58, 'rgba(90,80,60,0.15)');      // division de Cassini
-      g.addColorStop(0.64, 'rgba(200,180,140,0.75)');   // anneau A
-      g.addColorStop(0.85, 'rgba(190,170,135,0.65)');
-      g.addColorStop(1.00, 'rgba(150,135,105,0)');
-    }
+    g.addColorStop(0, 'rgba(150,170,180,0)');
+    g.addColorStop(0.3, 'rgba(150,170,180,0.25)');
+    g.addColorStop(0.5, 'rgba(170,190,200,0.1)');
+    g.addColorStop(0.8, 'rgba(160,180,190,0.3)');
+    g.addColorStop(1, 'rgba(150,170,180,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
   });

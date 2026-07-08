@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { OrbitControls } from '../libs/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from '../libs/CSS2DRenderer.js';
 import { SUN, PLANETS, MOONS, AU_KM } from './data.js';
-import { bodyTexture, ringTexture, glowTexture, starSpriteTexture } from './textures.js';
+import { bodyTexture, ringTexture, glowTexture, starSpriteTexture, milkyWayTexture, loadingManager } from './textures.js';
+import { upcomingEvents, skyReport } from './planetarium.js';
 
 const A = window.Astronomy;
 
@@ -25,6 +26,8 @@ const eclToThree = (v, out) => out.set(v.x, v.z, -v.y);
 
 // ---------- Scène ----------
 const scene = new THREE.Scene();
+scene.background = milkyWayTexture();
+scene.backgroundIntensity = 0.45;
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 30000);
 camera.position.set(0, 260, 430);
 
@@ -146,11 +149,18 @@ function buildBody(data, { isMoon = false, parentBody = null } = {}) {
 const sunBody = buildBody(SUN);
 systemGroup.add(sunBody.group);
 {
+  const glowMap = glowTexture();
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTexture(), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
+    map: glowMap, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
   }));
   glow.scale.setScalar(SUN.displayR * 7);
   sunBody.group.add(glow);
+  // Couronne externe : halo large et doux autour du Soleil
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowMap, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.35,
+  }));
+  halo.scale.setScalar(SUN.displayR * 16);
+  sunBody.group.add(halo);
 }
 
 // Planètes
@@ -355,6 +365,23 @@ const infoPanel = document.getElementById('info-panel');
 const infoTable = document.getElementById('info-table');
 let liveRows = null;
 
+// Panneaux latéraux mutuellement exclusifs (fiche astre / événements / ciel)
+const leftPanels = {
+  info: infoPanel,
+  events: document.getElementById('events-panel'),
+  sky: document.getElementById('sky-panel'),
+};
+function showLeftPanel(name) {
+  for (const [k, el] of Object.entries(leftPanels)) el.classList.toggle('visible', k === name);
+  if (name !== 'info') liveRows = null;
+}
+document.querySelectorAll('.panel-close').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.classList.remove('visible');
+    if (btn.parentElement === infoPanel) liveRows = null;
+  });
+});
+
 function showInfo(body) {
   const d = body.data;
   document.getElementById('info-name').textContent = d.name;
@@ -377,7 +404,7 @@ function showInfo(body) {
     tr2.insertCell().textContent = '🌍 Distance à la Terre';
     liveRows.earth = tr2.insertCell();
   }
-  infoPanel.classList.add('visible');
+  showLeftPanel('info');
   updateLiveRows(body);
 }
 
@@ -402,21 +429,20 @@ function updateLiveRows(body) {
   }
 }
 
-document.getElementById('info-close').addEventListener('click', () => {
-  infoPanel.classList.remove('visible');
-  liveRows = null;
-});
-
 let selectedBody = null;
-function selectBody(body) {
-  selectedBody = body;
+// Centre la caméra sur un astre sans ouvrir sa fiche
+function focusBody(body) {
   followBody = body;
   focusTimer = 1.3;
   overviewTimer = 0;
   body.group.getWorldPosition(prevFollowPos);
   controls.minDistance = Math.max(body.data.displayR * 1.5, 0.5);
-  showInfo(body);
   gotoSelect.value = body.data.key;
+}
+function selectBody(body) {
+  selectedBody = body;
+  focusBody(body);
+  showInfo(body);
 }
 
 function goOverview() {
@@ -479,6 +505,121 @@ document.getElementById('toggle-labels').addEventListener('change', (e) => {
 document.getElementById('toggle-moons').addEventListener('change', (e) => {
   const show = e.target.checked;
   bodies.filter((b) => b.isMoon).forEach((b) => (b.group.visible = show));
+});
+
+// ---------- Planétarium : événements à venir ----------
+const eventsList = document.getElementById('events-list');
+const eventsFrom = document.getElementById('events-from');
+
+function renderEvents() {
+  eventsFrom.textContent = 'À partir du ' + simDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  eventsList.innerHTML = '';
+  for (const ev of upcomingEvents(simDate)) {
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    const icon = document.createElement('div');
+    icon.className = 'event-icon';
+    icon.textContent = ev.icon;
+    const main = document.createElement('div');
+    main.className = 'event-main';
+    const date = document.createElement('div');
+    date.className = 'event-date';
+    date.textContent = ev.date.toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const title = document.createElement('div');
+    title.className = 'event-title';
+    title.textContent = ev.title;
+    main.append(date, title);
+    if (ev.desc) {
+      const desc = document.createElement('div');
+      desc.className = 'event-desc';
+      desc.textContent = ev.desc;
+      main.appendChild(desc);
+    }
+    const go = document.createElement('button');
+    go.className = 'event-go';
+    go.textContent = '▶ Voir';
+    go.addEventListener('click', () => {
+      simDate = new Date(ev.date);
+      syncedToNow = false;
+      setSpeed(0); // pause sur l'événement, à l'utilisateur d'explorer
+      clearTrails();
+      const b = bodyByKey.get(ev.focus);
+      if (b) focusBody(b);
+    });
+    row.append(icon, main, go);
+    eventsList.appendChild(row);
+  }
+}
+document.getElementById('events-btn').addEventListener('click', () => {
+  renderEvents();
+  showLeftPanel('events');
+});
+
+// ---------- Planétarium : ciel de ce soir ----------
+let skyCoords = { lat: 43.61, lon: 3.88, label: 'Montpellier (par défaut)' };
+try {
+  const saved = JSON.parse(localStorage.getItem('skyCoords'));
+  if (saved && Number.isFinite(saved.lat) && Number.isFinite(saved.lon)) skyCoords = saved;
+} catch (e) { /* stockage local indisponible */ }
+
+const skyPanel = leftPanels.sky;
+const skyLocation = document.getElementById('sky-location');
+const skySummary = document.getElementById('sky-summary');
+const skyList = document.getElementById('sky-list');
+const fmtHour = (d) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+function renderSky() {
+  const r = skyReport(simDate, skyCoords.lat, skyCoords.lon);
+  skyLocation.textContent = `📍 ${skyCoords.label} · ${simDate.toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`;
+  const parts = [];
+  if (r.sun.up) {
+    parts.push('☀️ Il fait jour' + (r.sun.evt ? ` (coucher du soleil à ${fmtHour(r.sun.evt.date)})` : '') + '. Les astres ci-dessous seront visibles à la nuit tombée.');
+  } else {
+    parts.push('🌙 Il fait nuit' + (r.sun.evt ? ` (lever du soleil à ${fmtHour(r.sun.evt.date)})` : '') + '.');
+  }
+  if (r.moon) parts.push(`Lune : ${r.moon.name}, ${Math.round(r.moon.fraction * 100)} % éclairée.`);
+  skySummary.textContent = parts.join(' ');
+  skyList.innerHTML = '';
+  for (const row of r.rows) {
+    const div = document.createElement('div');
+    div.className = 'sky-row ' + (row.up ? 'sky-up' : 'sky-down');
+    const name = document.createElement('div');
+    name.className = 'sky-name';
+    name.textContent = row.name;
+    const detail = document.createElement('div');
+    detail.className = 'sky-detail';
+    if (row.up) {
+      detail.textContent = `${row.dir}, ${Math.round(row.altitude)}° de hauteur`
+        + (row.mag !== null ? `, mag ${row.mag.toFixed(1)}` : '')
+        + (row.evt ? ` · se couche à ${fmtHour(row.evt.date)}` : '');
+    } else {
+      detail.textContent = 'sous l’horizon' + (row.evt ? ` · se lève à ${fmtHour(row.evt.date)}` : '');
+    }
+    div.append(name, detail);
+    skyList.appendChild(div);
+  }
+}
+document.getElementById('sky-btn').addEventListener('click', () => {
+  renderSky();
+  showLeftPanel('sky');
+});
+document.getElementById('geo-btn').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    skyLocation.textContent = `📍 Géolocalisation indisponible · ${skyCoords.label}`;
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      skyCoords = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        label: `${pos.coords.latitude.toFixed(2)}°, ${pos.coords.longitude.toFixed(2)}°`,
+      };
+      try { localStorage.setItem('skyCoords', JSON.stringify(skyCoords)); } catch (e) { /* — */ }
+      renderSky();
+    },
+    () => { skyLocation.textContent = `📍 Position refusée · ${skyCoords.label}`; },
+  );
 });
 
 // ---------- Dérive galactique ----------
@@ -570,13 +711,18 @@ document.getElementById('toggle-drift').addEventListener('change', (e) => {
 // ---------- Boucle d'animation ----------
 const clock = new THREE.Clock();
 let liveRowTimer = 0;
+let skyTimer = 0;
 let lastSimMs = NaN;
 const DEFAULT_CAM = new THREE.Vector3(0, 260, 430);
 const _origin = new THREE.Vector3(0, 0, 0);
 
 buildOrbits();
 updatePositions(simDate);
-document.getElementById('loading').remove();
+// L'écran de chargement disparaît quand les textures sont prêtes
+// (délai de secours si un fichier manque)
+const loadingEl = document.getElementById('loading');
+loadingManager.onLoad = () => loadingEl.remove();
+setTimeout(() => loadingEl.remove(), 8000);
 
 function animate() {
   requestAnimationFrame(animate);
@@ -648,6 +794,11 @@ function animate() {
     });
     if (selectedBody && liveRows) updateLiveRows(selectedBody);
     if (document.activeElement !== dateInput) syncDateInput();
+  }
+  // Le panneau du ciel se met à jour toutes les 2 s (calculs lever/coucher coûteux)
+  if (skyPanel.classList.contains('visible')) {
+    skyTimer += dt;
+    if (skyTimer > 2) { skyTimer = 0; renderSky(); }
   }
 
   controls.update();
