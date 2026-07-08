@@ -9,6 +9,7 @@ import { SUN, PLANETS, MOONS, AU_KM } from './data.js';
 import { bodyTexture, ringTexture, glowTexture, starSpriteTexture, milkyWayTexture, loadingManager } from './textures.js';
 import { upcomingEvents, skyReport } from './planetarium.js';
 import { VOYAGERS, voyagerPosition, voyagerPath } from './spacecraft.js';
+import { buildISS } from './iss.js';
 
 const A = window.Astronomy;
 
@@ -105,12 +106,17 @@ function buildBody(data, { isMoon = false, parentBody = null } = {}) {
   tiltGroup.rotation.z = THREE.MathUtils.degToRad(data.tiltDeg || 0);
   group.add(tiltGroup);
 
-  const isSun = data.key === 'Sun';
-  const mat = isSun
-    ? new THREE.MeshBasicMaterial({ map: bodyTexture('Sun') })
-    : new THREE.MeshLambertMaterial({ map: bodyTexture(data.key) });
-  const segs = isMoon ? [32, 24] : [64, 48];
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(data.displayR, segs[0], segs[1]), mat);
+  let mesh;
+  if (data.key === 'ISS') {
+    mesh = buildISS(); // vraie silhouette : poutre, panneaux solaires, modules
+  } else {
+    const isSun = data.key === 'Sun';
+    const mat = isSun
+      ? new THREE.MeshBasicMaterial({ map: bodyTexture('Sun') })
+      : new THREE.MeshLambertMaterial({ map: bodyTexture(data.key) });
+    const segs = isMoon ? [32, 24] : [64, 48];
+    mesh = new THREE.Mesh(new THREE.SphereGeometry(data.displayR, segs[0], segs[1]), mat);
+  }
   tiltGroup.add(mesh);
 
   const body = { data, group, tiltGroup, mesh, isMoon, parentBody, spinRate: 0 };
@@ -121,8 +127,19 @@ function buildBody(data, { isMoon = false, parentBody = null } = {}) {
   group.add(label);
   body.label = label;
 
-  mesh.userData.body = body;
-  clickableMeshes.push(mesh);
+  if (data.key === 'ISS') {
+    // Le modèle est un groupe sans géométrie propre : cible de clic invisible
+    const hit = new THREE.Mesh(
+      new THREE.SphereGeometry(1.3, 8, 6),
+      new THREE.MeshBasicMaterial({ visible: false }),
+    );
+    hit.userData.body = body;
+    tiltGroup.add(hit);
+    clickableMeshes.push(hit);
+  } else {
+    mesh.userData.body = body;
+    clickableMeshes.push(mesh);
+  }
 
   // Anneaux
   if (data.hasRings) {
@@ -302,6 +319,7 @@ function moonDirection(m, time) {
 
 // ---------- Positions en temps réel ----------
 const helioReal = new Map();   // key → position héliocentrique réelle (AU, écliptique)
+const _lookTarget = new THREE.Vector3();
 
 function updatePositions(date) {
   const time = A.MakeTime(date);
@@ -346,6 +364,11 @@ function updatePositions(date) {
         });
       } else {
         helioReal.set(m.key, parentEcl);
+      }
+      if (m.key === 'ISS') {
+        // La station garde sa face tournée vers la Terre (un tour par orbite)
+        bodyByKey.get('Earth').group.getWorldPosition(_lookTarget);
+        b.mesh.lookAt(_lookTarget);
       }
     }
   }

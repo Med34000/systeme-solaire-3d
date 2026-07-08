@@ -256,9 +256,9 @@ export const MOONS = [
   {
     key: 'ISS', name: 'ISS', parent: 'Earth', source: 'circular', periodDays: 0.06452,
     inclinationDeg: 51.6, icon: '🛰️',
-    radiusKm: 0.055, displayR: 0.35, displayDist: 4.4, realOrbitKm: 420,
+    radiusKm: 0.055, displayR: 0.8, displayDist: 4.4, realOrbitKm: 420,
     type: 'Station spatiale internationale',
-    desc: "Le plus grand objet jamais construit dans l'espace, habité en permanence depuis novembre 2000. Elle fait le tour de la Terre en 93 minutes à 27 600 km/h — ses occupants voient 16 levers de soleil par jour. Position illustrative : la période, la vitesse et l'inclinaison (51,6°) sont réelles.",
+    desc: "Le plus grand objet jamais construit dans l'espace, habité en permanence depuis novembre 2000. Elle fait le tour de la Terre en 93 minutes à 27 600 km/h — ses occupants voient 16 levers de soleil par jour. Représentation 3D simplifiée à taille exagérée ; la période, la vitesse et l'inclinaison (51,6°) sont réelles.",
     info: {
       'Altitude': '≈ 400 km',
       'Vitesse': '27 600 km/h (7,7 km/s)',
