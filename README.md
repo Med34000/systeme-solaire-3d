@@ -21,7 +21,13 @@ python3 -m http.server 8123
 
 - ☀️ Le Soleil, les 8 planètes (avec anneaux de Saturne et d'Uranus) — **vraies textures** issues de l'imagerie NASA
 - 🌙 La Lune, les 4 lunes galiléennes de Jupiter (Io, Europe, Ganymède, Callisto) et Titan
+- 🛰️ La **Station spatiale internationale** en orbite terrestre (période, vitesse et inclinaison réelles)
+- 🛰️ Les sondes **Voyager 1 & 2** avec leurs trajectoires historiques complètes : lancement 1977, survols de Jupiter, Saturne, Uranus, Neptune (aux positions réelles des planètes ces jours-là), puis sortie du système solaire — distances et temps de trajet de la lumière en direct
 - ⭐ Panorama réel de la Voie lactée + 4 500 étoiles en toile de fond
+
+## 🎂 Le ciel de ta naissance
+
+Entre ta date de naissance : la simulation se téléporte à cet instant et te raconte ton ciel — combien de tours du Soleil tu as bouclés, la distance parcourue à travers la galaxie depuis, la phase de la Lune à ta naissance, et quelles planètes étaient au-dessus de l'horizon. Parfait à partager !
 
 ## 📅 Événements à venir
 

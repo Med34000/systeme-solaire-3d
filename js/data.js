@@ -243,7 +243,7 @@ export const MOONS = [
   },
   {
     key: 'Titan', name: 'Titan', parent: 'Saturn', source: 'circular', periodDays: 15.945,
-    radiusKm: 2574.7, displayR: moonDisplayRadius(2574.7), displayDist: 15,
+    radiusKm: 2574.7, displayR: moonDisplayRadius(2574.7), displayDist: 15, realOrbitKm: 1221870,
     type: 'Plus grande lune de Saturne',
     desc: "La seule lune avec une atmosphère épaisse. Il y pleut du méthane liquide qui forme lacs et rivières. La sonde Huygens s'y est posée en 2005. (Position approximative : orbite circulaire.)",
     info: {
@@ -251,6 +251,23 @@ export const MOONS = [
       'Distance à Saturne': '1 222 000 km',
       'Révolution': '15,9 jours',
       'Atmosphère': '95 % azote, 5 % méthane',
+    },
+  },
+  {
+    key: 'ISS', name: 'ISS', parent: 'Earth', source: 'circular', periodDays: 0.06452,
+    inclinationDeg: 51.6, icon: '🛰️',
+    radiusKm: 0.055, displayR: 0.35, displayDist: 4.4, realOrbitKm: 420,
+    type: 'Station spatiale internationale',
+    desc: "Le plus grand objet jamais construit dans l'espace, habité en permanence depuis novembre 2000. Elle fait le tour de la Terre en 93 minutes à 27 600 km/h — ses occupants voient 16 levers de soleil par jour. Position illustrative : la période, la vitesse et l'inclinaison (51,6°) sont réelles.",
+    info: {
+      'Altitude': '≈ 400 km',
+      'Vitesse': '27 600 km/h (7,7 km/s)',
+      'Période': '92,9 min (15,5 tours/jour)',
+      'Équipage': '7 astronautes (en général)',
+      'Dimensions': '109 m × 73 m',
+      'Masse': '≈ 420 tonnes',
+      'En orbite depuis': '1998',
+      'Visible à l’œil nu': 'Oui, point brillant qui file',
     },
   },
 ];

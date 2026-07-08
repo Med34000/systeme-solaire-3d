@@ -51,7 +51,7 @@
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     justify-content: center; max-width: 96vw;
   }
-  #time-controls button, #overview-btn, #events-btn, #sky-btn, #now-btn, #go-date-btn {
+  #time-controls button, #overview-btn, #events-btn, #sky-btn, #birth-btn, #now-btn, #go-date-btn {
     background: rgba(60, 90, 150, 0.35);
     border: 1px solid var(--panel-border);
     color: var(--text);
@@ -142,6 +142,25 @@
   .sky-up .sky-name { color: #7dedaa; }
   .sky-down .sky-name { color: #8fa8d4; font-weight: 400; }
 
+  /* ---- Ciel de ta naissance ---- */
+  .birth-inputs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .birth-inputs input {
+    background: rgba(0,0,0,.4); border: 1px solid var(--panel-border); color: var(--text);
+    border-radius: 8px; padding: 6px 8px; font-size: 12.5px; flex: 1; min-width: 0;
+    color-scheme: dark;
+  }
+  #birth-go {
+    background: var(--accent); border: none; color: #04122e; font-weight: 600;
+    border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 12.5px;
+    width: 100%; margin-bottom: 6px;
+  }
+  #birth-go:hover { filter: brightness(1.15); }
+  .birth-line {
+    font-size: 12.5px; line-height: 1.55; color: #dce8ff;
+    padding: 7px 0; border-bottom: 1px solid rgba(120,170,255,.12);
+  }
+  .birth-line b { color: var(--accent); }
+
   /* ---- Astuce en bas à droite ---- */
   #hint {
     bottom: 14px; right: 14px;
@@ -184,6 +203,7 @@
     <button id="overview-btn">🌌 Vue d'ensemble</button>
     <button id="events-btn">📅 Événements à venir</button>
     <button id="sky-btn">🌃 Ce soir dans le ciel</button>
+    <button id="birth-btn">🎂 Le ciel de ta naissance</button>
     <hr>
     <label><input type="checkbox" id="toggle-orbits" checked> Orbites</label>
     <label><input type="checkbox" id="toggle-labels" checked> Étiquettes</label>
@@ -215,6 +235,18 @@
     <button id="geo-btn">📍 Utiliser ma position</button>
     <div id="sky-summary" class="sky-summary"></div>
     <div id="sky-list"></div>
+  </div>
+
+  <div id="birth-panel" class="panel side-panel">
+    <button class="panel-close">✕</button>
+    <h2>🎂 Le ciel de ta naissance</h2>
+    <div class="panel-sub">Choisis ta date de naissance (et l'heure si tu la connais)</div>
+    <div class="birth-inputs">
+      <input type="date" id="birth-date">
+      <input type="time" id="birth-time" value="12:00">
+    </div>
+    <button id="birth-go">✨ Voir mon ciel</button>
+    <div id="birth-result"></div>
   </div>
 
   <div id="time-controls" class="panel">

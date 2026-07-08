@@ -8,6 +8,7 @@ import { CSS2DRenderer, CSS2DObject } from '../libs/CSS2DRenderer.js';
 import { SUN, PLANETS, MOONS, AU_KM } from './data.js';
 import { bodyTexture, ringTexture, glowTexture, starSpriteTexture, milkyWayTexture, loadingManager } from './textures.js';
 import { upcomingEvents, skyReport } from './planetarium.js';
+import { VOYAGERS, voyagerPosition, voyagerPath } from './spacecraft.js';
 
 const A = window.Astronomy;
 
@@ -180,6 +181,44 @@ for (const m of MOONS) {
   }
 }
 
+// ---------- Sondes Voyager ----------
+// Un point brillant + une étincelle colorée + une large cible de clic invisible,
+// et la trajectoire historique complète en ligne.
+const voyagerBodies = [];
+for (const v of VOYAGERS) {
+  const group = new THREE.Group();
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  );
+  group.add(dot);
+  const spark = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: starSpriteTexture(), color: v.color,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  spark.scale.setScalar(5);
+  group.add(spark);
+  const hit = new THREE.Mesh(
+    new THREE.SphereGeometry(3, 8, 6),
+    new THREE.MeshBasicMaterial({ visible: false }),
+  );
+  group.add(hit);
+
+  const body = { data: v, group, tiltGroup: group, mesh: dot, isMoon: false, parentBody: null, spinRate: 0 };
+  dot.userData.body = body;
+  hit.userData.body = body;
+  clickableMeshes.push(hit, dot);
+  const label = makeLabel(v.name, false, body);
+  label.position.set(0, 2.2, 0);
+  group.add(label);
+  body.label = label;
+
+  bodies.push(body);
+  bodyByKey.set(v.key, body);
+  systemGroup.add(group);
+  voyagerBodies.push(body);
+}
+
 // ---------- Lignes d'orbites ----------
 const orbitMat = (color) => new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 });
 const _v = new THREE.Vector3();
@@ -206,6 +245,20 @@ function buildOrbits() {
       pts.push(new THREE.Vector3(ecl.x * k, ecl.z * k, -ecl.y * k));
     }
     addOrbitLine(pts, p.orbitColor, null);
+  }
+  // Trajectoires historiques des Voyager (lignes ouvertes, pas des boucles)
+  for (const v of VOYAGERS) {
+    const pts = voyagerPath(v.key).map((p) => {
+      const r = Math.hypot(p.x, p.y, p.z);
+      const k = scaleDist(r) / r;
+      return new THREE.Vector3(p.x * k, p.z * k, -p.y * k);
+    });
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: v.color, transparent: true, opacity: 0.4 }),
+    );
+    systemGroup.add(line);
+    orbitLines.push(line);
   }
   // Orbites des lunes : trajectoire réelle normalisée à la distance d'affichage
   for (const m of MOONS) {
@@ -234,9 +287,14 @@ function moonDirection(m, time) {
     const g = eqjToEclVec(sv);
     vx = g.x; vy = g.y; vz = g.z;
   } else {
-    // Titan : orbite circulaire approchée dans le plan équatorial de Saturne
+    // Orbite circulaire approchée (Titan, ISS), inclinaison optionnelle
     const angle = 2 * Math.PI * ((time.ut / m.periodDays) % 1) + 1.32;
-    return new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+    const inc = THREE.MathUtils.degToRad(m.inclinationDeg || 0);
+    return new THREE.Vector3(
+      Math.cos(angle),
+      Math.sin(angle) * Math.sin(inc),
+      Math.sin(angle) * Math.cos(inc),
+    );
   }
   const len = Math.hypot(vx, vy, vz) || 1;
   return new THREE.Vector3(vx / len, vz / len, -vy / len);
@@ -276,9 +334,35 @@ function updatePositions(date) {
       const len = Math.hypot(g.x, g.y, g.z) || 1;
       b.group.position.set(g.x / len, g.z / len, -g.y / len).multiplyScalar(m.displayDist);
     } else {
-      b.group.position.copy(moonDirection(m, time).multiplyScalar(m.displayDist));
-      helioReal.set(m.key, parentEcl); // approximation suffisante pour les distances affichées
+      const dir = moonDirection(m, time);
+      b.group.position.copy(dir).multiplyScalar(m.displayDist);
+      if (m.realOrbitKm) {
+        // Vraie distance orbitale pour les fiches (direction three → écliptique)
+        const off = m.realOrbitKm / AU_KM;
+        helioReal.set(m.key, {
+          x: parentEcl.x + dir.x * off,
+          y: parentEcl.y - dir.z * off,
+          z: parentEcl.z + dir.y * off,
+        });
+      } else {
+        helioReal.set(m.key, parentEcl);
+      }
     }
+  }
+
+  // Sondes Voyager (invisibles avant leur lancement en 1977)
+  for (const b of voyagerBodies) {
+    const p = voyagerPosition(b.data.key, date);
+    if (!p) {
+      b.group.visible = false;
+      helioReal.delete(b.data.key);
+      continue;
+    }
+    b.group.visible = true;
+    helioReal.set(b.data.key, p);
+    const r = Math.hypot(p.x, p.y, p.z);
+    const k = scaleDist(r) / r;
+    b.group.position.set(p.x * k, p.z * k, -p.y * k);
   }
 }
 
@@ -370,6 +454,7 @@ const leftPanels = {
   info: infoPanel,
   events: document.getElementById('events-panel'),
   sky: document.getElementById('sky-panel'),
+  birth: document.getElementById('birth-panel'),
 };
 function showLeftPanel(name) {
   for (const [k, el] of Object.entries(leftPanels)) el.classList.toggle('visible', k === name);
@@ -404,16 +489,29 @@ function showInfo(body) {
     tr2.insertCell().textContent = '🌍 Distance à la Terre';
     liveRows.earth = tr2.insertCell();
   }
+  if (d.isSpacecraft) {
+    const tr3 = infoTable.insertRow(); tr3.className = 'live-row';
+    tr3.insertCell().textContent = '⏱ Trajet de la lumière';
+    liveRows.light = tr3.insertCell();
+  }
   showLeftPanel('info');
   updateLiveRows(body);
 }
 
 function fmtAU(au) {
   const km = au * AU_KM;
+  if (au < 0.001) return `${Math.round(km).toLocaleString('fr-FR')} km`; // ISS, etc.
   const kmStr = km >= 1e6
     ? `${(km / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M km`
     : `${Math.round(km).toLocaleString('fr-FR')} km`;
   return `${au.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} UA (${kmStr})`;
+}
+
+function fmtLightTime(au) {
+  const s = au * 499.005; // la lumière parcourt 1 UA en ~499 s
+  if (s < 90) return `${Math.round(s)} s`;
+  if (s < 5400) return `${Math.round(s / 60)} min`;
+  return `${Math.floor(s / 3600)} h ${String(Math.round((s % 3600) / 60)).padStart(2, '0')} min`;
 }
 
 function updateLiveRows(body) {
@@ -423,9 +521,11 @@ function updateLiveRows(body) {
   if (liveRows.sun) {
     liveRows.sun.textContent = fmtAU(Math.hypot(p.x, p.y, p.z));
   }
-  if (liveRows.earth) {
+  if (liveRows.earth || liveRows.light) {
     const e = helioReal.get('Earth');
-    liveRows.earth.textContent = fmtAU(Math.hypot(p.x - e.x, p.y - e.y, p.z - e.z));
+    const dAU = Math.hypot(p.x - e.x, p.y - e.y, p.z - e.z);
+    if (liveRows.earth) liveRows.earth.textContent = fmtAU(dAU);
+    if (liveRows.light) liveRows.light.textContent = fmtLightTime(dAU);
   }
 }
 
@@ -470,7 +570,12 @@ const gotoSelect = document.getElementById('goto-select');
   }
   for (const m of MOONS) {
     const o = document.createElement('option');
-    o.value = m.key; o.textContent = `　🌙 ${m.name}`;
+    o.value = m.key; o.textContent = `　${m.icon || '🌙'} ${m.name}`;
+    gotoSelect.appendChild(o);
+  }
+  for (const v of VOYAGERS) {
+    const o = document.createElement('option');
+    o.value = v.key; o.textContent = `🛰️ ${v.name}`;
     gotoSelect.appendChild(o);
   }
 }
@@ -620,6 +725,60 @@ document.getElementById('geo-btn').addEventListener('click', () => {
     },
     () => { skyLocation.textContent = `📍 Position refusée · ${skyCoords.label}`; },
   );
+});
+
+// ---------- Le ciel de ta naissance ----------
+const birthResult = document.getElementById('birth-result');
+const MOON_EMOJIS = {
+  'nouvelle lune': '🌑', 'premier croissant': '🌒', 'premier quartier': '🌓',
+  'gibbeuse croissante': '🌔', 'pleine lune': '🌕', 'gibbeuse décroissante': '🌖',
+  'dernier quartier': '🌗', 'dernier croissant': '🌘',
+};
+
+document.getElementById('birth-btn').addEventListener('click', () => showLeftPanel('birth'));
+
+document.getElementById('birth-go').addEventListener('click', () => {
+  const dateVal = document.getElementById('birth-date').value;
+  if (!dateVal) {
+    birthResult.innerHTML = '<div class="birth-line">Choisis d’abord ta date de naissance ☝️</div>';
+    return;
+  }
+  const timeVal = document.getElementById('birth-time').value || '12:00';
+  const d = new Date(`${dateVal}T${timeVal}`);
+  if (isNaN(d)) return;
+
+  // La simulation saute au moment de la naissance, en vue d'ensemble
+  simDate = new Date(Math.min(Math.max(d.getTime(), DATE_MIN), DATE_MAX));
+  syncedToNow = false;
+  setSpeed(0);
+  clearTrails();
+  followBody = null;
+  selectedBody = null;
+  overviewTimer = 1.6;
+  controls.minDistance = 2;
+  gotoSelect.value = '';
+
+  const now = new Date();
+  const years = (now - d) / (365.25 * 86400 * 1000);
+  const lines = [];
+  lines.push(`📅 <b>${d.toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</b> — voici la disposition des planètes ce jour-là, dans la vue 3D.`);
+  if (years > 0.1) {
+    lines.push(`🎂 Depuis, tu as bouclé <b>${Math.floor(years)} tours complets</b> autour du Soleil, soit <b>${Math.round(years * 0.94).toLocaleString('fr-FR')} milliards de km</b> parcourus à 107 000 km/h.`);
+    lines.push(`🌌 Et le système solaire entier a filé de <b>${Math.round(years * 7.26).toLocaleString('fr-FR')} milliards de km</b> à travers la galaxie.`);
+  } else if (years < -0.1) {
+    lines.push('🔮 Cette date est dans le futur… un ciel de naissance en avant-première !');
+  }
+  try {
+    const r = skyReport(d, skyCoords.lat, skyCoords.lon);
+    if (r.moon) {
+      lines.push(`${MOON_EMOJIS[r.moon.name] || '🌙'} La Lune était <b>${r.moon.name}</b>, éclairée à ${Math.round(r.moon.fraction * 100)} %.`);
+    }
+    const up = r.rows.filter((x) => x.up && x.key !== 'Moon').map((x) => `${x.name} (${x.dir})`);
+    lines.push(up.length
+      ? `🪐 Au-dessus de l’horizon (${skyCoords.label}) : <b>${up.join(', ')}</b>.`
+      : `🪐 Aucune planète n’était au-dessus de l’horizon à cette heure-là (${skyCoords.label}).`);
+  } catch (e) { /* date hors plage de calcul du ciel local */ }
+  birthResult.innerHTML = lines.map((l) => `<div class="birth-line">${l}</div>`).join('');
 });
 
 // ---------- Dérive galactique ----------
