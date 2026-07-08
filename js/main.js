@@ -9,7 +9,7 @@ import { SUN, PLANETS, MOONS, AU_KM } from './data.js';
 import { bodyTexture, ringTexture, glowTexture, starSpriteTexture, milkyWayTexture, loadingManager } from './textures.js';
 import { upcomingEvents, skyReport } from './planetarium.js';
 import { VOYAGERS, voyagerPosition, voyagerPath } from './spacecraft.js';
-import { buildISS } from './iss.js';
+import { buildISS, buildVoyager } from './models.js';
 
 const A = window.Astronomy;
 
@@ -204,16 +204,13 @@ for (const m of MOONS) {
 const voyagerBodies = [];
 for (const v of VOYAGERS) {
   const group = new THREE.Group();
-  const dot = new THREE.Mesh(
-    new THREE.SphereGeometry(0.55, 16, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffffff }),
-  );
-  group.add(dot);
+  const model = buildVoyager(); // parabole, bus, RTG, Disque d'or…
+  group.add(model);
   const spark = new THREE.Sprite(new THREE.SpriteMaterial({
     map: starSpriteTexture(), color: v.color,
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.7,
   }));
-  spark.scale.setScalar(7);
+  spark.scale.setScalar(2.5);
   group.add(spark);
   // Balise à taille d'écran constante : visible même à l'autre bout du système
   const beacon = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -229,10 +226,9 @@ for (const v of VOYAGERS) {
   );
   group.add(hit);
 
-  const body = { data: v, group, tiltGroup: group, mesh: dot, isMoon: false, parentBody: null, spinRate: 0, beacon };
-  dot.userData.body = body;
+  const body = { data: v, group, tiltGroup: group, mesh: model, isMoon: false, parentBody: null, spinRate: 0, beacon };
   hit.userData.body = body;
-  clickableMeshes.push(hit, dot);
+  clickableMeshes.push(hit);
   const label = makeLabel(v.name, false, body);
   label.position.set(0, 2.2, 0);
   group.add(label);
@@ -394,6 +390,9 @@ function updatePositions(date) {
     const r = Math.hypot(p.x, p.y, p.z);
     const k = scaleDist(r) / r;
     b.group.position.set(p.x * k, p.z * k, -p.y * k);
+    // L'antenne parabolique reste pointée vers la Terre, comme la vraie
+    bodyByKey.get('Earth').group.getWorldPosition(_lookTarget);
+    b.mesh.lookAt(_lookTarget);
   }
 }
 

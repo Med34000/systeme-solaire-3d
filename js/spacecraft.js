@@ -20,7 +20,7 @@ export const VOYAGERS = [
     anchor: { t: Date.UTC(2026, 0, 1), distAU: 169, raDeg: 261.8, decDeg: 12.25 },
     rateAUperYear: 3.58,
     type: 'Sonde spatiale interstellaire (NASA)',
-    desc: "L'objet humain le plus lointain de tous les temps. Lancée en 1977, elle a survolé Jupiter et Saturne avant de quitter le système solaire. Depuis 2012, elle navigue dans l'espace interstellaire, emportant le Disque d'or : sons et images de la Terre destinés à d'éventuels extraterrestres. (Trajectoire reconstituée, approximative — invisible avant son lancement en 1977.)",
+    desc: "L'objet humain le plus lointain de tous les temps. Lancée en 1977, elle a survolé Jupiter et Saturne avant de quitter le système solaire. Depuis 2012, elle navigue dans l'espace interstellaire, emportant le Disque d'or : sons et images de la Terre destinés à d'éventuels extraterrestres. (Modèle 3D et trajectoire simplifiés — invisible avant son lancement en 1977.)",
     info: {
       'Lancement': '5 septembre 1977',
       'Survol de Jupiter': '5 mars 1979',
@@ -45,7 +45,7 @@ export const VOYAGERS = [
     anchor: { t: Date.UTC(2026, 0, 1), distAU: 142, raDeg: 301.5, decDeg: -58.5 },
     rateAUperYear: 3.16,
     type: 'Sonde spatiale interstellaire (NASA)',
-    desc: "La seule sonde à avoir survolé les quatre planètes géantes : Jupiter, Saturne, Uranus et Neptune — le « Grand Tour » rendu possible par un alignement planétaire qui n'arrive que tous les 175 ans. Dans l'espace interstellaire depuis 2018. (Trajectoire reconstituée, approximative — invisible avant son lancement en 1977.)",
+    desc: "La seule sonde à avoir survolé les quatre planètes géantes : Jupiter, Saturne, Uranus et Neptune — le « Grand Tour » rendu possible par un alignement planétaire qui n'arrive que tous les 175 ans. Dans l'espace interstellaire depuis 2018. (Modèle 3D et trajectoire simplifiés — invisible avant son lancement en 1977.)",
     info: {
       'Lancement': '20 août 1977',
       'Survol de Jupiter': '9 juillet 1979',
