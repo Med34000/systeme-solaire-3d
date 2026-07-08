@@ -213,15 +213,23 @@ for (const v of VOYAGERS) {
     map: starSpriteTexture(), color: v.color,
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
   }));
-  spark.scale.setScalar(5);
+  spark.scale.setScalar(7);
   group.add(spark);
+  // Balise à taille d'écran constante : visible même à l'autre bout du système
+  const beacon = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: starSpriteTexture(), color: v.color,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    sizeAttenuation: false,
+  }));
+  beacon.scale.setScalar(0.022);
+  group.add(beacon);
   const hit = new THREE.Mesh(
     new THREE.SphereGeometry(3, 8, 6),
     new THREE.MeshBasicMaterial({ visible: false }),
   );
   group.add(hit);
 
-  const body = { data: v, group, tiltGroup: group, mesh: dot, isMoon: false, parentBody: null, spinRate: 0 };
+  const body = { data: v, group, tiltGroup: group, mesh: dot, isMoon: false, parentBody: null, spinRate: 0, beacon };
   dot.userData.body = body;
   hit.userData.body = body;
   clickableMeshes.push(hit, dot);
@@ -272,7 +280,7 @@ function buildOrbits() {
     });
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineBasicMaterial({ color: v.color, transparent: true, opacity: 0.4 }),
+      new THREE.LineBasicMaterial({ color: v.color, transparent: true, opacity: 0.55 }),
     );
     systemGroup.add(line);
     orbitLines.push(line);
@@ -937,6 +945,13 @@ function animate() {
       controls.target.add(deltaDrift);
     }
     updateTrails();
+  }
+
+  // Pulsation des balises Voyager pour qu'elles attirent l'œil
+  const elapsed = clock.elapsedTime;
+  for (let i = 0; i < voyagerBodies.length; i++) {
+    const vb = voyagerBodies[i];
+    if (vb.group.visible) vb.beacon.scale.setScalar(0.022 * (1 + 0.2 * Math.sin(elapsed * 2.2 + i * 2)));
   }
 
   // Rotation propre des astres (bornée pour éviter le stroboscope aux grandes vitesses)
