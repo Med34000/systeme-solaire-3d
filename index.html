@@ -73,7 +73,7 @@
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     justify-content: center; max-width: 96vw;
   }
-  #time-controls button, #overview-btn, #events-btn, #sky-btn, #birth-btn, #now-btn, #go-date-btn {
+  #time-controls button, #overview-btn, #events-btn, #sky-btn, #birth-btn, #history-btn, #light-btn, .light-speeds button, #now-btn, #go-date-btn {
     background: rgba(60, 90, 150, 0.35);
     border: 1px solid var(--panel-border);
     color: var(--text);
@@ -171,12 +171,65 @@
     border-radius: 8px; padding: 6px 8px; font-size: 12.5px; flex: 1; min-width: 0;
     color-scheme: dark;
   }
-  #birth-go {
+  #birth-go, #light-launch, #lapse-btn {
     background: var(--accent); border: none; color: #04122e; font-weight: 600;
     border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 12.5px;
     width: 100%; margin-bottom: 6px;
   }
-  #birth-go:hover { filter: brightness(1.15); }
+  #birth-go:hover, #light-launch:hover, #lapse-btn:hover { filter: brightness(1.15); }
+  #lapse-btn { margin-top: 10px; }
+
+  /* ---- Course de la lumière ---- */
+  .light-speeds { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
+  .light-speeds button.active { background: var(--accent); color: #04122e; font-weight: 600; }
+  #light-clock {
+    font-size: 20px; color: #ffe9a8; font-weight: 600;
+    font-variant-numeric: tabular-nums; margin: 4px 0 8px;
+  }
+  .light-row {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 6px 0; border-bottom: 1px solid rgba(120,170,255,.1);
+    font-size: 12px; color: #8fa8d4;
+  }
+  .light-row.hit { color: #ffe9a8; }
+  .light-row.hit .light-name { color: #fff; font-weight: 600; }
+  #light-compare { font-size: 11.5px; color: #b9c9e8; line-height: 1.55; padding-top: 8px; }
+
+  /* ---- Légende Pale Blue Dot ---- */
+  #pbd-caption {
+    position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
+    max-width: 600px; width: calc(100vw - 40px); text-align: center;
+    display: none; z-index: 11;
+  }
+  #pbd-caption.visible { display: block; }
+  #pbd-caption .quote { font-style: italic; color: #dce8ff; font-size: 14px; line-height: 1.65; }
+  #pbd-caption .who { color: #8fa8d4; font-size: 12px; margin-top: 8px; }
+  #pbd-caption .pbd-hint { color: var(--accent); font-size: 11.5px; margin-top: 8px; }
+
+  /* ---- HUD du time-lapse de vie ---- */
+  #lapse-hud {
+    position: absolute; top: 46%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; display: none; z-index: 12; pointer-events: none;
+  }
+  #lapse-hud.visible { display: block; }
+  #lapse-year {
+    font-family: var(--font-display); font-size: 72px; font-weight: 600;
+    color: #fff; letter-spacing: 5px; text-shadow: 0 0 36px rgba(109, 180, 255, 0.6);
+  }
+  .lapse-stats { display: flex; gap: 14px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .lapse-stat {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 9px 16px; font-size: 12px; color: #b9c9e8;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .lapse-stat b { color: var(--accent); font-size: 18px; display: block; font-variant-numeric: tabular-nums; }
+  #lapse-end { margin-top: 14px; font-size: 15px; color: #ffe9a8; display: none; }
+  #lapse-close {
+    margin-top: 12px; pointer-events: auto;
+    background: rgba(60, 90, 150, 0.5); border: 1px solid var(--panel-border);
+    color: var(--text); padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 12px;
+  }
+  #lapse-close:hover { background: rgba(90, 130, 200, 0.6); }
   .birth-line {
     font-size: 12.5px; line-height: 1.55; color: #dce8ff;
     padding: 7px 0; border-bottom: 1px solid rgba(120,170,255,.12);
@@ -226,6 +279,8 @@
     <button id="events-btn">📅 Événements à venir</button>
     <button id="sky-btn">🌃 Ce soir dans le ciel</button>
     <button id="birth-btn">🎂 Le ciel de ta naissance</button>
+    <button id="history-btn">📸 Moments historiques</button>
+    <button id="light-btn">🌟 Course de la lumière</button>
     <hr>
     <label><input type="checkbox" id="toggle-orbits" checked> Orbites</label>
     <label><input type="checkbox" id="toggle-labels" checked> Étiquettes</label>
@@ -269,6 +324,47 @@
     </div>
     <button id="birth-go">✨ Voir mon ciel</button>
     <div id="birth-result"></div>
+  </div>
+
+  <div id="history-panel" class="panel side-panel">
+    <button class="panel-close">✕</button>
+    <h2>📸 Moments historiques</h2>
+    <div class="panel-sub">Revis les grandes dates de l'aventure spatiale</div>
+    <div id="history-list"></div>
+  </div>
+
+  <div id="light-panel" class="panel side-panel">
+    <button class="panel-close">✕</button>
+    <h2>🌟 La course de la lumière</h2>
+    <div class="panel-sub">La lumière file à 299 792 km/s — et pourtant, regarde le temps qu'il lui faut…</div>
+    <div class="light-speeds">
+      <button data-lspeed="1">Temps réel</button>
+      <button data-lspeed="60" class="active">×60</button>
+      <button data-lspeed="600">×600</button>
+      <button data-lspeed="3600">×3600</button>
+    </div>
+    <button id="light-launch">☀️ Lancer le photon</button>
+    <div id="light-clock">—</div>
+    <div id="light-list"></div>
+    <div id="light-compare"></div>
+  </div>
+
+  <div id="pbd-caption" class="panel">
+    <button class="panel-close">✕</button>
+    <div class="quote">« Regardez encore ce point. C'est ici. C'est notre foyer. C'est nous. Tous ceux que vous aimez, tous ceux que vous connaissez, tous les êtres humains qui aient jamais vécu y ont passé leur vie. »</div>
+    <div class="who">— Carl Sagan, à propos de cette photo prise par Voyager 1 le 14 février 1990, à 6 milliards de km</div>
+    <div class="pbd-hint">Tu es à la position réelle de Voyager 1 ce jour-là. Le point pâle étiqueté « Terre », c'est nous. 🖱️ Zoome et regarde autour de toi.</div>
+  </div>
+
+  <div id="lapse-hud">
+    <div id="lapse-year">—</div>
+    <div class="lapse-stats">
+      <div class="lapse-stat"><b id="lapse-tours">0</b>tours du Soleil</div>
+      <div class="lapse-stat"><b id="lapse-lunes">0</b>pleines lunes</div>
+      <div class="lapse-stat"><b id="lapse-gal">0</b>milliards de km dans la galaxie</div>
+    </div>
+    <div id="lapse-end">✨ …et l'aventure continue aujourd'hui !</div>
+    <button id="lapse-close">✕ Fermer</button>
   </div>
 
   <div id="time-controls" class="panel">

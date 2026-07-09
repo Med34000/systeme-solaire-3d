@@ -27,7 +27,15 @@ python3 -m http.server 8123
 
 ## 🎂 Le ciel de ta naissance
 
-Entre ta date de naissance : la simulation se téléporte à cet instant et te raconte ton ciel — combien de tours du Soleil tu as bouclés, la distance parcourue à travers la galaxie depuis, la phase de la Lune à ta naissance, et quelles planètes étaient au-dessus de l'horizon. Parfait à partager !
+Entre ta date de naissance : la simulation se téléporte à cet instant et te raconte ton ciel — combien de tours du Soleil tu as bouclés, la distance parcourue à travers la galaxie depuis, la phase de la Lune à ta naissance, et quelles planètes étaient au-dessus de l'horizon. Puis clique « 🎬 Rejouer ma vie cosmique » : le système s'anime de ta naissance à aujourd'hui en 15 secondes, compteurs à l'appui (tours du Soleil, pleines lunes, kilomètres parcourus dans la galaxie).
+
+## 🌟 La course de la lumière
+
+Lance un photon depuis le Soleil et regarde-le traverser le système solaire — en temps réel ou accéléré. L'onde lumineuse se propage dans la vue 3D, chaque astre s'illumine quand elle l'atteint : 3 min pour Mercure, 8 min 20 pour la Terre, plus de 4 h pour Neptune, presque une journée pour Voyager 1. Avec le comparateur qui remet les idées en place : jusqu'à Mars, c'est 12 minutes en lumière… et 191 ans en voiture.
+
+## 📸 Moments historiques
+
+Revis les grandes dates de l'aventure spatiale : Spoutnik, Gagarine, Apollo 11, les survols des Voyager… Chaque moment téléporte la simulation à la date exacte. Le clou : la **Pale Blue Dot** — place-toi à la position réelle de Voyager 1 le 14 février 1990 et retourne-toi vers la Terre, ce point pâle à 6 milliards de km, avec les mots de Carl Sagan.
 
 ## 📅 Événements à venir
 

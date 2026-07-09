@@ -10,6 +10,7 @@ import { bodyTexture, ringTexture, glowTexture, starSpriteTexture, milkyWayTextu
 import { upcomingEvents, skyReport } from './planetarium.js';
 import { VOYAGERS, voyagerPosition, voyagerPath } from './spacecraft.js';
 import { buildISS, buildVoyager } from './models.js';
+import { MOMENTS } from './moments.js';
 
 const A = window.Astronomy;
 
@@ -485,6 +486,8 @@ const leftPanels = {
   events: document.getElementById('events-panel'),
   sky: document.getElementById('sky-panel'),
   birth: document.getElementById('birth-panel'),
+  history: document.getElementById('history-panel'),
+  light: document.getElementById('light-panel'),
 };
 function showLeftPanel(name) {
   for (const [k, el] of Object.entries(leftPanels)) el.classList.toggle('visible', k === name);
@@ -494,6 +497,7 @@ document.querySelectorAll('.panel-close').forEach((btn) => {
   btn.addEventListener('click', () => {
     btn.parentElement.classList.remove('visible');
     if (btn.parentElement === infoPanel) liveRows = null;
+    if (btn.parentElement.id === 'light-panel') stopLightRace();
   });
 });
 
@@ -562,6 +566,7 @@ function updateLiveRows(body) {
 let selectedBody = null;
 // Centre la caméra sur un astre sans ouvrir sa fiche
 function focusBody(body) {
+  hidePBD();
   followBody = body;
   focusTimer = 1.3;
   overviewTimer = 0;
@@ -576,6 +581,7 @@ function selectBody(body) {
 }
 
 function goOverview() {
+  hidePBD();
   followBody = null;
   selectedBody = null;
   focusTimer = 0;
@@ -759,6 +765,7 @@ document.getElementById('geo-btn').addEventListener('click', () => {
 
 // ---------- Le ciel de ta naissance ----------
 const birthResult = document.getElementById('birth-result');
+let lastBirthMs = null;
 const MOON_EMOJIS = {
   'nouvelle lune': '🌑', 'premier croissant': '🌒', 'premier quartier': '🌓',
   'gibbeuse croissante': '🌔', 'pleine lune': '🌕', 'gibbeuse décroissante': '🌖',
@@ -776,6 +783,7 @@ document.getElementById('birth-go').addEventListener('click', () => {
   const timeVal = document.getElementById('birth-time').value || '12:00';
   const d = new Date(`${dateVal}T${timeVal}`);
   if (isNaN(d)) return;
+  lastBirthMs = d.getTime();
 
   // La simulation saute au moment de la naissance, en vue d'ensemble
   simDate = new Date(Math.min(Math.max(d.getTime(), DATE_MIN), DATE_MAX));
@@ -808,8 +816,240 @@ document.getElementById('birth-go').addEventListener('click', () => {
       ? `🪐 Au-dessus de l’horizon (${skyCoords.label}) : <b>${up.join(', ')}</b>.`
       : `🪐 Aucune planète n’était au-dessus de l’horizon à cette heure-là (${skyCoords.label}).`);
   } catch (e) { /* date hors plage de calcul du ciel local */ }
-  birthResult.innerHTML = lines.map((l) => `<div class="birth-line">${l}</div>`).join('');
+  let html = lines.map((l) => `<div class="birth-line">${l}</div>`).join('');
+  if (years > 0.1) html += '<button id="lapse-btn">🎬 Rejouer ma vie cosmique (15 s)</button>';
+  birthResult.innerHTML = html;
+  document.getElementById('lapse-btn')?.addEventListener('click', startLapse);
 });
+
+// ---------- Moments historiques & Pale Blue Dot ----------
+const pbdCaption = document.getElementById('pbd-caption');
+function hidePBD() { pbdCaption.classList.remove('visible'); }
+
+// Reconstitution : caméra à la position réelle de Voyager 1 le 14 février 1990,
+// regard tourné vers la Terre — un point pâle à 6 milliards de km.
+function paleBlueDot() {
+  simDate = new Date(Date.UTC(1990, 1, 14, 4, 48));
+  syncedToNow = false;
+  setSpeed(0);
+  clearTrails();
+  updatePositions(simDate);
+  followBody = null;
+  selectedBody = null;
+  focusTimer = 0;
+  overviewTimer = 0;
+  controls.minDistance = 2;
+  gotoSelect.value = '';
+  const vp = bodyByKey.get('Voyager1').group.getWorldPosition(new THREE.Vector3());
+  const ep = bodyByKey.get('Earth').group.getWorldPosition(new THREE.Vector3());
+  const away = vp.clone().sub(ep).normalize();
+  camera.position.copy(vp).addScaledVector(away, 6).add(new THREE.Vector3(0, 2, 0));
+  controls.target.copy(ep);
+  showLeftPanel('');
+  pbdCaption.classList.add('visible');
+}
+
+let historyRendered = false;
+function renderHistory() {
+  if (historyRendered) return;
+  historyRendered = true;
+  const list = document.getElementById('history-list');
+  for (const m of MOMENTS) {
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    const icon = document.createElement('div');
+    icon.className = 'event-icon';
+    icon.textContent = m.icon;
+    const main = document.createElement('div');
+    main.className = 'event-main';
+    const date = document.createElement('div');
+    date.className = 'event-date';
+    date.textContent = new Date(m.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const title = document.createElement('div');
+    title.className = 'event-title';
+    title.textContent = m.title;
+    const desc = document.createElement('div');
+    desc.className = 'event-desc';
+    desc.textContent = m.desc;
+    main.append(date, title, desc);
+    const go = document.createElement('button');
+    go.className = 'event-go';
+    go.textContent = m.pbd ? '📸 Revivre' : '▶ Voir';
+    go.addEventListener('click', () => {
+      if (m.pbd) { paleBlueDot(); return; }
+      simDate = new Date(m.date);
+      syncedToNow = false;
+      setSpeed(0);
+      clearTrails();
+      const b = bodyByKey.get(m.focus);
+      if (b) focusBody(b);
+    });
+    row.append(icon, main, go);
+    list.appendChild(row);
+  }
+}
+document.getElementById('history-btn').addEventListener('click', () => {
+  renderHistory();
+  showLeftPanel('history');
+});
+
+// ---------- Course de la lumière ----------
+const AU_LIGHT_S = 499.005;   // la lumière met ~499 s pour parcourir 1 UA
+let lightSpeed = 60;
+let lightRace = null;         // { t: secondes-lumière écoulées, targets, done }
+const lightClockEl = document.getElementById('light-clock');
+const lightListEl = document.getElementById('light-list');
+const lightCompareEl = document.getElementById('light-compare');
+
+const lightSphere = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 48, 24),
+  new THREE.MeshBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false }),
+);
+const ringPts = [];
+for (let i = 0; i < 128; i++) {
+  const a = (i / 128) * Math.PI * 2;
+  ringPts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)));
+}
+const lightRing = new THREE.LineLoop(
+  new THREE.BufferGeometry().setFromPoints(ringPts),
+  new THREE.LineBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.9 }),
+);
+lightSphere.visible = lightRing.visible = false;
+systemGroup.add(lightSphere, lightRing);
+
+// Éclat lumineux quand l'onde atteint un astre
+const flashes = [];
+const flashTexture = starSpriteTexture();
+function spawnFlash(worldPos) {
+  const mat = new THREE.SpriteMaterial({
+    map: flashTexture, color: 0xffe9a8,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const s = new THREE.Sprite(mat);
+  s.position.copy(worldPos);
+  scene.add(s);
+  flashes.push({ sprite: s, t: 0 });
+}
+
+function fmtLight(sec) {
+  if (sec < 90) return `${Math.round(sec)} s`;
+  if (sec < 5400) return `${Math.floor(sec / 60)} min ${String(Math.round(sec % 60)).padStart(2, '0')} s`;
+  return `${Math.floor(sec / 3600)} h ${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')} min`;
+}
+function fmtTravel(km, kmh) {
+  const hours = km / kmh;
+  const years = hours / 8766;
+  if (years >= 1) return `${Math.round(years).toLocaleString('fr-FR')} ans`;
+  const days = hours / 24;
+  return days >= 2 ? `${Math.round(days)} jours` : `${Math.round(hours)} h`;
+}
+
+function launchLight() {
+  const targets = [];
+  for (const p of PLANETS) {
+    const h = helioReal.get(p.key);
+    targets.push({ key: p.key, name: p.name, icon: '🪐', distAU: Math.hypot(h.x, h.y, h.z), hit: false });
+  }
+  for (const vb of voyagerBodies) {
+    const h = helioReal.get(vb.data.key);
+    if (h) targets.push({ key: vb.data.key, name: vb.data.name, icon: '🛰️', distAU: Math.hypot(h.x, h.y, h.z), hit: false });
+  }
+  targets.sort((a, b) => a.distAU - b.distAU);
+  lightRace = { t: 0, targets, done: false };
+  lightListEl.innerHTML = '';
+  for (const tg of targets) {
+    const row = document.createElement('div');
+    row.className = 'light-row';
+    row.id = `lr-${tg.key}`;
+    row.innerHTML = `<span class="light-name">${tg.icon} ${tg.name}</span><span class="light-eta">prévu : ${fmtLight(tg.distAU * AU_LIGHT_S)}</span>`;
+    lightListEl.appendChild(row);
+  }
+  lightCompareEl.textContent = '';
+  lightSphere.visible = lightRing.visible = true;
+  lightSphere.scale.setScalar(0.01);
+  lightRing.scale.setScalar(0.01);
+}
+
+function stopLightRace() {
+  lightRace = null;
+  lightSphere.visible = lightRing.visible = false;
+  lightClockEl.textContent = '—';
+}
+
+function lightHit(tg) {
+  tg.hit = true;
+  const row = document.getElementById(`lr-${tg.key}`);
+  if (row) {
+    row.classList.add('hit');
+    row.querySelector('.light-eta').textContent = `✓ atteint en ${fmtLight(tg.distAU * AU_LIGHT_S)}`;
+  }
+  const b = bodyByKey.get(tg.key);
+  if (b) spawnFlash(b.group.getWorldPosition(new THREE.Vector3()));
+  const km = tg.distAU * AU_KM;
+  lightCompareEl.innerHTML = `Jusqu'à <b>${tg.name}</b> : 🌟 lumière ${fmtLight(tg.distAU * AU_LIGHT_S)} · 🚀 fusée la plus rapide ${fmtTravel(km, 58000)} · ✈️ avion ${fmtTravel(km, 900)} · 🚗 voiture ${fmtTravel(km, 130)}`;
+}
+
+document.querySelectorAll('.light-speeds button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    lightSpeed = Number(btn.dataset.lspeed);
+    document.querySelectorAll('.light-speeds button').forEach((b2) => b2.classList.toggle('active', b2 === btn));
+  });
+});
+document.getElementById('light-launch').addEventListener('click', launchLight);
+document.getElementById('light-btn').addEventListener('click', () => showLeftPanel('light'));
+
+// ---------- Time-lapse de ta vie ----------
+const LAPSE_DUR = 15000;
+let lapse = null;   // { t0, t1, start, finished }
+const lapseHud = document.getElementById('lapse-hud');
+const lapseYearEl = document.getElementById('lapse-year');
+const lapseToursEl = document.getElementById('lapse-tours');
+const lapseLunesEl = document.getElementById('lapse-lunes');
+const lapseGalEl = document.getElementById('lapse-gal');
+
+function startLapse() {
+  if (!lastBirthMs || lastBirthMs > Date.now()) return;
+  hidePBD();
+  showLeftPanel('');
+  followBody = null;
+  selectedBody = null;
+  focusTimer = 0;
+  overviewTimer = 1.8;
+  controls.minDistance = 2;
+  gotoSelect.value = '';
+  setSpeed(0);
+  syncedToNow = false;
+  clearTrails();
+  simDate = new Date(lastBirthMs);
+  lapse = { t0: lastBirthMs, t1: Date.now(), start: performance.now(), finished: false };
+  liveBadge.textContent = '🎬 TIME-LAPSE DE TA VIE';
+  liveBadge.classList.add('off');
+  document.getElementById('lapse-end').style.display = 'none';
+  lapseHud.classList.add('visible');
+}
+
+function updateLapseHud(k) {
+  const yrs = (simDate.getTime() - lapse.t0) / (365.25 * 86400e3);
+  lapseYearEl.textContent = simDate.getFullYear();
+  lapseToursEl.textContent = Math.floor(yrs);
+  lapseLunesEl.textContent = Math.floor(yrs * 12.368);
+  lapseGalEl.textContent = Math.round(yrs * 7.26).toLocaleString('fr-FR');
+  if (k >= 1 && !lapse.finished) {
+    lapse.finished = true;
+    document.getElementById('lapse-end').style.display = 'block';
+  }
+}
+
+function endLapse() {
+  lapse = null;
+  lapseHud.classList.remove('visible');
+  simDate = new Date();
+  direction = 1;
+  setSpeed(1);
+  syncedToNow = true;
+  updateBadge();
+}
+document.getElementById('lapse-close').addEventListener('click', endLapse);
 
 // ---------- Dérive galactique ----------
 // Le Soleil se déplace à ~230 km/s autour du centre galactique, en direction de
@@ -918,7 +1158,13 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
 
   // Avance du temps simulé
-  if (syncedToNow && speed === 1 && direction === 1) {
+  if (lapse) {
+    // Time-lapse de vie : le temps est piloté de la naissance à aujourd'hui
+    const k = Math.min((performance.now() - lapse.start) / LAPSE_DUR, 1);
+    const e = k * k * (3 - 2 * k);
+    simDate = new Date(lapse.t0 + e * (lapse.t1 - lapse.t0));
+    updateLapseHud(k);
+  } else if (syncedToNow && speed === 1 && direction === 1) {
     simDate = new Date();
   } else if (speed !== 0) {
     let t = simDate.getTime() + dt * speed * direction * 1000;
@@ -944,6 +1190,33 @@ function animate() {
       controls.target.add(deltaDrift);
     }
     updateTrails();
+  }
+
+  // Onde lumineuse en vol
+  if (lightRace && !lightRace.done) {
+    lightRace.t += dt * lightSpeed;
+    const rAU = lightRace.t / AU_LIGHT_S;
+    const rd = scaleDist(Math.max(rAU, 1e-4));
+    lightSphere.scale.setScalar(rd);
+    lightRing.scale.setScalar(rd);
+    for (const tg of lightRace.targets) {
+      if (!tg.hit && tg.distAU <= rAU) lightHit(tg);
+    }
+    const last = lightRace.targets[lightRace.targets.length - 1];
+    if (last.hit && rAU > last.distAU * 1.15) lightRace.done = true;
+  }
+
+  // Éclats lumineux (impacts de l'onde)
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    const f = flashes[i];
+    f.t += dt;
+    f.sprite.scale.setScalar(2 + f.t * 22);
+    f.sprite.material.opacity = Math.max(0, 0.95 * (1 - f.t / 0.9));
+    if (f.t > 0.9) {
+      scene.remove(f.sprite);
+      f.sprite.material.dispose();
+      flashes.splice(i, 1);
+    }
   }
 
   // Pulsation des balises Voyager pour qu'elles attirent l'œil
@@ -990,6 +1263,10 @@ function animate() {
     });
     if (selectedBody && liveRows) updateLiveRows(selectedBody);
     if (document.activeElement !== dateInput) syncDateInput();
+    if (lightRace) {
+      const rAU = lightRace.t / AU_LIGHT_S;
+      lightClockEl.textContent = `⏱ ${fmtLight(lightRace.t)} de lumière — ${rAU.toLocaleString('fr-FR', { maximumFractionDigits: rAU < 2 ? 3 : 1 })} UA`;
+    }
   }
   // Le panneau du ciel se met à jour toutes les 2 s (calculs lever/coucher coûteux)
   if (skyPanel.classList.contains('visible')) {
