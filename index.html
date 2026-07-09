@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Système Solaire 3D — Temps réel</title>
 <meta name="description" content="Explore le système solaire en 3D avec les positions réelles des astres en temps réel : planètes, lunes, ISS, sondes Voyager, éclipses à venir et le ciel de ta naissance. Gratuit, dans ton navigateur.">
 <link rel="canonical" href="https://med34000.github.io/systeme-solaire-3d/">
@@ -260,10 +260,57 @@
     background: #000; z-index: 100; color: var(--accent); font-size: 15px;
     flex-direction: column; gap: 10px;
   }
+
+  /* ---- Boutons flottants (mobile) ---- */
+  .fab {
+    display: none; position: absolute; z-index: 20;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    color: var(--text); font-size: 20px; cursor: pointer;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  #nav-toggle { top: 14px; right: 14px; }
+  #time-toggle { bottom: 14px; right: 14px; }
+
+  /* ---- Adaptation smartphone ---- */
+  @media (max-width: 768px) {
+    .fab { display: flex; }
+
+    #topbar { max-width: calc(100vw - 84px); padding: 8px 12px; gap: 2px; }
+    #topbar h1 { font-size: 13px; letter-spacing: 1.5px; }
+    #sim-date { font-size: 11.5px; }
+    #live-badge { font-size: 10px; }
+
+    /* Le panneau de navigation devient un tiroir replié derrière ☰ */
+    #nav-panel { display: none; top: 68px; right: 10px; width: 220px;
+      max-height: calc(100vh - 150px); overflow-y: auto; }
+    #nav-panel.open { display: flex; }
+    #drift-note.visible { display: none; }
+
+    /* Les contrôles du temps se replient derrière ⏱ */
+    #time-controls { display: none; bottom: 70px; left: 8px; right: 8px;
+      transform: none; max-width: none; }
+    #time-controls.open { display: flex; }
+
+    /* Les fiches deviennent des feuilles en bas d'écran */
+    .side-panel { top: auto; bottom: 8px; left: 8px; right: 70px;
+      width: auto; max-height: 46vh; }
+
+    #hint { display: none; }
+    #pbd-caption { bottom: 70px; width: calc(100vw - 86px); }
+    #lapse-year { font-size: 44px; letter-spacing: 3px; }
+    .lapse-stats { gap: 8px; }
+    .lapse-stat { padding: 7px 10px; font-size: 11px; }
+    .lapse-stat b { font-size: 15px; }
+  }
 </style>
 </head>
 <body>
   <div id="loading">☀️ Chargement des textures NASA et calcul des positions…</div>
+
+  <button id="nav-toggle" class="fab" title="Menu">☰</button>
+  <button id="time-toggle" class="fab" title="Contrôle du temps">⏱</button>
 
   <div id="topbar" class="panel">
     <h1>Système <span>Solaire</span> 3D</h1>

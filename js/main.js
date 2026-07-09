@@ -492,6 +492,10 @@ const leftPanels = {
 function showLeftPanel(name) {
   for (const [k, el] of Object.entries(leftPanels)) el.classList.toggle('visible', k === name);
   if (name !== 'info') liveRows = null;
+  // Sur mobile, une fiche ouverte remplace le tiroir du temps (place limitée)
+  if (name && matchMedia('(max-width: 768px)').matches) {
+    document.getElementById('time-controls').classList.remove('open');
+  }
 }
 document.querySelectorAll('.panel-close').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -1136,6 +1140,27 @@ document.getElementById('toggle-drift').addEventListener('change', (e) => {
     clearTrails();
   }
 });
+
+// ---------- Interface mobile : tiroirs repliables ----------
+const navPanelEl = document.getElementById('nav-panel');
+const timePanelEl = document.getElementById('time-controls');
+document.getElementById('nav-toggle').addEventListener('click', () => {
+  navPanelEl.classList.toggle('open');
+  timePanelEl.classList.remove('open');
+});
+document.getElementById('time-toggle').addEventListener('click', () => {
+  timePanelEl.classList.toggle('open');
+  navPanelEl.classList.remove('open');
+  if (timePanelEl.classList.contains('open') && matchMedia('(max-width: 768px)').matches) {
+    showLeftPanel('');
+  }
+});
+// Sur petit écran, choisir une action referme le tiroir de navigation
+const closeNavDrawer = () => {
+  if (matchMedia('(max-width: 768px)').matches) navPanelEl.classList.remove('open');
+};
+navPanelEl.querySelectorAll('button').forEach((b) => b.addEventListener('click', closeNavDrawer));
+gotoSelect.addEventListener('change', closeNavDrawer);
 
 // ---------- Boucle d'animation ----------
 const clock = new THREE.Clock();
