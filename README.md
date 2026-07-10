@@ -25,6 +25,11 @@ python3 -m http.server 8123
 - 🛰️ Les sondes **Voyager 1 & 2** avec leurs trajectoires historiques complètes : lancement 1977, survols de Jupiter, Saturne, Uranus, Neptune (aux positions réelles des planètes ces jours-là), puis sortie du système solaire — distances et temps de trajet de la lumière en direct
 - ⭐ Panorama réel de la Voie lactée + 4 500 étoiles en toile de fond
 
+## 🚀 Explorer & découvrir
+
+À l’ouverture, un écran d’accueil propose **Explorer** (libre navigation) ou **Voir les découvertes**.  
+Le menu de droite est volontairement simple : *Aller à…*, *Vue d’ensemble*, et **✨ Découvrir** — un hub qui regroupe les expériences (événements, ciel local, naissance, histoire, course de la lumière, distances réelles).
+
 ## 🎂 Le ciel de ta naissance
 
 Entre ta date de naissance : la simulation se téléporte à cet instant et te raconte ton ciel — combien de tours du Soleil tu as bouclés, la distance parcourue à travers la galaxie depuis, la phase de la Lune à ta naissance, et quelles planètes étaient au-dessus de l'horizon. Puis clique « 🎬 Rejouer ma vie cosmique » : le système s'anime de ta naissance à aujourd'hui en 15 secondes, compteurs à l'appui (tours du Soleil, pleines lunes, kilomètres parcourus dans la galaxie).
@@ -39,11 +44,20 @@ Revis les grandes dates de l'aventure spatiale : Spoutnik, Gagarine, Apollo 11, 
 
 ## 📅 Événements à venir
 
-Le bouton « Événements à venir » calcule les prochains rendez-vous célestes à partir de la date simulée : éclipses de Soleil et de Lune, oppositions de Mars/Jupiter/Saturne, meilleures visibilités de Mercure et Vénus, phases de la Lune, et le survol de l'astéroïde Apophis en 2029. Chaque événement a un bouton « ▶ Voir » qui téléporte la simulation à la date exacte.
+Depuis **Découvrir → Événements à venir**, la simulation calcule les prochains rendez-vous célestes à partir de la date simulée : éclipses de Soleil et de Lune, oppositions de Mars/Jupiter/Saturne, meilleures visibilités de Mercure et Vénus, phases de la Lune, et le survol de l'astéroïde Apophis en 2029. Chaque événement a un bouton « ▶ Voir » qui téléporte la simulation à la date exacte.
 
 ## 🌃 Ce soir dans le ciel
 
-Le bouton « Ce soir dans le ciel » montre, pour ta position (géolocalisation ou Montpellier par défaut), quelles planètes sont au-dessus de l'horizon **en ce moment** : direction (N/SE/O…), hauteur, magnitude, heures de lever/coucher, phase de la Lune et coucher du soleil. Fonctionne aussi à n'importe quelle date simulée.
+**Découvrir → Ce soir dans le ciel** montre, pour ta position (géolocalisation ou Montpellier par défaut), quelles planètes sont au-dessus de l'horizon **en ce moment** : direction (N/SE/O…), hauteur, magnitude, heures de lever/coucher, phase de la Lune et coucher du soleil. Fonctionne aussi à n'importe quelle date simulée.
+
+## 📏 Distances réelles
+
+Case **« Distances réelles »** (panneau de droite) ou carte dans **Découvrir** :
+
+- **Vue pédagogique** (défaut) : distances compressées (loi de puissance) pour tout voir d’un coup d’œil
+- **Distances réelles** : distances Soleil–planètes **linéaires** (vraie échelle) — transition animée ~3 s, toast pédagogique, caméra en vue d’ensemble
+
+Les **tailles** des astres restent exagérées (sinon les planètes deviendraient invisibles). C’est le moment « le système solaire, c’est surtout du vide ».
 
 ## Commandes
 
@@ -54,12 +68,13 @@ Le bouton « Ce soir dans le ciel » montre, pour ta position (géolocalisation 
 | Déplacer la vue | Clic droit + glisser |
 | Détails + zoom sur un astre | Clic sur l'astre ou son étiquette |
 | Naviguer | Menu « Aller à… » en haut à droite |
+| Expériences | Bouton « ✨ Découvrir » |
 
 ## 🌀 Dérive galactique
 
 Active la case « Dérive galactique » (panneau de droite) : le système solaire entier se déplace vers l'**apex solaire** (RA 18h, Dec +30°, direction Hercule/Véga) — comme dans la réalité, où le Soleil file à ~230 km/s autour du centre de la Voie lactée. Les planètes laissent des **traînées hélicoïdales** colorées derrière elles (le fameux effet « vortex »).
 
-Astuce : combine avec une vitesse élevée (1 s = 1 mois ou 1 an) pour bien voir les spirales se former. La vitesse de dérive affichée est stylisée, comme les distances.
+Astuce : combine avec une vitesse élevée (1 s = 1 mois ou 1 an) pour bien voir les spirales se former. La vitesse de dérive affichée est stylisée, comme les distances. (Désactivée automatiquement en mode distances réelles.)
 
 ## Contrôle du temps
 
@@ -72,13 +87,40 @@ Astuce : combine avec une vitesse élevée (1 s = 1 mois ou 1 an) pour bien voir
 ## Précision
 
 - Positions héliocentriques des planètes, de la Lune et des lunes galiléennes : calcul astronomique réel (VSOP87/NOVAS via astronomy-engine). Les directions angulaires sont exactes.
-- Les **distances sont compressées** (loi de puissance) pour que tout reste visible — à l'échelle réelle, Neptune serait invisible à 6 000 fois le rayon du Soleil affiché.
+- Par défaut, les **distances sont compressées** (loi de puissance) pour que tout reste visible. Le mode **Distances réelles** bascule sur une échelle linéaire (directions toujours exactes).
+- Les **tailles** des astres restent toujours stylisées / exagérées pour rester visibles.
 - Titan : orbite circulaire approchée (non fournie par astronomy-engine).
 - Les distances affichées dans les fiches (Distance au Soleil / à la Terre) sont les **vraies distances**, mises à jour en direct.
 - Événements célestes (éclipses, oppositions, élongations, phases lunaires) et positions dans le ciel local : calculés par astronomy-engine, précision de quelques minutes.
 
+## Historique des contributions
+
+### 2026-07-10 — Grok 4.5 (xAI)
+
+Améliorations et refactor réalisés par **Grok 4.5** :
+
+- **Architecture** : découpage de l’ancien monolithe `main.js` en modules (`scene`, `world`, `time`, `focus`, `panels`, `sim`, `scale`, features dédiées…)
+- **CSS** : extraction vers `css/styles.css` (séparé de `index.html`)
+- **Onboarding** : écran d’accueil **Explorer** + hub **✨ Découvrir** (charge cognitive réduite dans le menu)
+- **Feature** : toggle **📏 Distances réelles** (transition animée, toast pédagogique, caméra adaptée, reconstruction des orbites)
+- **Interface mobile** : conservation des tiroirs / fiches bas d’écran dans la nouvelle structure
+- Déploiement du lot sur GitHub Pages
+
+### Avant 2026-07-10 — Claude Fable
+
+Base du projet réalisée par **Claude Fable** :
+
+- Simulation 3D Three.js + positions réelles (astronomy-engine)
+- Soleil, 8 planètes, lunes, ISS, Voyager 1 & 2, textures NASA
+- Contrôle du temps, dérive galactique, planétarium (événements + ciel local)
+- Ciel de naissance, time-lapse de vie, course de la lumière
+- Moments historiques & Pale Blue Dot
+- Interface, SEO / Open Graph, déploiement GitHub Pages
+
 ## Crédits
 
+- **Développement (base)** : Claude Fable
+- **Développement (refactor & distances réelles, 2026-07-10)** : Grok 4.5 (xAI)
 - Calculs astronomiques : [astronomy-engine](https://github.com/cosinekitty/astronomy) (MIT) par Don Cross
 - Rendu 3D : [Three.js](https://threejs.org/) (MIT)
 - Textures des planètes et de la Voie lactée : [Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0), d'après l'imagerie NASA
