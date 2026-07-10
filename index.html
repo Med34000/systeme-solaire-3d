@@ -26,291 +26,28 @@
 <meta name="twitter:title" content="Système Solaire 3D — le cosmos en temps réel">
 <meta name="twitter:description" content="Planètes aux positions réelles, ISS, sondes Voyager, éclipses à venir, voyage dans le temps et ciel de ta naissance.">
 <meta name="twitter:image" content="https://med34000.github.io/systeme-solaire-3d/og-image.jpg">
-<style>
-  :root {
-    --panel-bg: rgba(10, 16, 32, 0.82);
-    --panel-border: rgba(120, 170, 255, 0.25);
-    --accent: #6db4ff;
-    --text: #dce8ff;
-    --font-display: 'Futura', 'Avenir Next Condensed', 'Trebuchet MS', sans-serif;
-    --font-body: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-  body { font-family: var(--font-body); color: var(--text); }
-  canvas { display: block; }
 
-  .panel {
-    position: absolute;
-    background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 12px 16px;
-    z-index: 10;
-  }
-
-  /* ---- Barre du haut : titre + date ---- */
-  #topbar {
-    top: 14px; left: 14px;
-    display: flex; flex-direction: column; gap: 4px;
-    max-width: 420px;
-  }
-  #topbar h1 { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: #fff; }
-  #topbar h1 span { color: var(--accent); }
-  #sim-date { font-size: 14px; color: var(--accent); font-variant-numeric: tabular-nums; }
-  #live-badge {
-    display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px;
-    background: rgba(80, 220, 120, 0.18); color: #7dedaa; border: 1px solid rgba(80,220,120,.4);
-    margin-top: 2px; width: fit-content;
-  }
-  #live-badge.off { background: rgba(255,180,60,.14); color: #ffcf7d; border-color: rgba(255,180,60,.4); }
-
-  /* ---- Contrôles du temps ---- */
-  #time-controls {
-    bottom: 14px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-    justify-content: center; max-width: 96vw;
-  }
-  #time-controls button, #overview-btn, #events-btn, #sky-btn, #birth-btn, #history-btn, #light-btn, .light-speeds button, #now-btn, #go-date-btn {
-    background: rgba(60, 90, 150, 0.35);
-    border: 1px solid var(--panel-border);
-    color: var(--text);
-    padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px;
-    transition: background .15s;
-    white-space: nowrap;
-  }
-  #time-controls button:hover { background: rgba(90, 130, 200, 0.5); }
-  #time-controls button.active { background: var(--accent); color: #04122e; font-weight: 600; }
-  #date-input {
-    background: rgba(0,0,0,.4); border: 1px solid var(--panel-border); color: var(--text);
-    border-radius: 8px; padding: 5px 8px; font-size: 12px;
-    color-scheme: dark;
-  }
-
-  /* ---- Panneau de droite : navigation & options ---- */
-  #nav-panel {
-    top: 14px; right: 14px;
-    display: flex; flex-direction: column; gap: 8px;
-    width: 200px;
-  }
-  #nav-panel label { font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  #goto-select {
-    background: rgba(0,0,0,.4); border: 1px solid var(--panel-border); color: var(--text);
-    border-radius: 8px; padding: 6px 8px; font-size: 13px; width: 100%;
-  }
-  #nav-panel hr { border: none; border-top: 1px solid var(--panel-border); margin: 2px 0; }
-  #drift-note { font-size: 10.5px; color: #8fa8d4; line-height: 1.45; display: none; }
-  #drift-note.visible { display: block; }
-
-  /* ---- Panneaux latéraux (fiche astre / événements / ciel) ---- */
-  .side-panel {
-    top: 120px; left: 14px;
-    width: 310px; max-height: calc(100vh - 220px);
-    overflow-y: auto;
-    display: none;
-  }
-  .side-panel.visible { display: block; }
-  .side-panel h2 { font-family: var(--font-display); font-size: 19px; letter-spacing: 1px; color: #fff; margin-bottom: 2px; padding-right: 24px; }
-  .panel-close {
-    position: absolute; top: 8px; right: 10px; background: none; border: none;
-    color: #8fa8d4; font-size: 18px; cursor: pointer;
-  }
-  .panel-close:hover { color: #fff; }
-  .panel-sub { font-size: 11.5px; color: var(--accent); margin-bottom: 8px; }
-
-  #info-panel h2 { font-family: var(--font-display); font-size: 22px; letter-spacing: 1.5px; color: #fff; margin-bottom: 2px; }
-  #info-panel .subtitle { font-size: 12px; color: var(--accent); margin-bottom: 10px; }
-  #info-panel .desc { font-size: 12.5px; line-height: 1.5; color: #b9c9e8; margin-bottom: 12px; }
-  #info-panel table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  #info-panel td { padding: 4px 0; vertical-align: top; }
-  #info-panel td:first-child { color: #8fa8d4; padding-right: 10px; white-space: nowrap; }
-  #info-panel td:last-child { text-align: right; color: #eaf1ff; }
-  #info-panel tr { border-bottom: 1px solid rgba(120,170,255,.1); }
-  .live-row td:last-child { color: #7dedaa !important; font-variant-numeric: tabular-nums; }
-
-  /* ---- Événements à venir ---- */
-  .event-row {
-    display: flex; gap: 8px; align-items: flex-start;
-    padding: 8px 0; border-bottom: 1px solid rgba(120,170,255,.12);
-  }
-  .event-icon { font-size: 15px; margin-top: 1px; }
-  .event-main { flex: 1; min-width: 0; }
-  .event-date { font-size: 11px; color: var(--accent); }
-  .event-title { font-size: 12.5px; font-weight: 600; color: #eaf1ff; }
-  .event-desc { font-size: 11px; color: #8fa8d4; line-height: 1.4; }
-  .event-go {
-    background: rgba(60, 90, 150, 0.35); border: 1px solid var(--panel-border);
-    color: var(--text); border-radius: 6px; padding: 4px 9px; cursor: pointer;
-    font-size: 11px; white-space: nowrap; align-self: center;
-  }
-  .event-go:hover { background: var(--accent); color: #04122e; }
-
-  /* ---- Ciel de ce soir ---- */
-  #geo-btn {
-    background: rgba(60, 90, 150, 0.35); border: 1px solid var(--panel-border);
-    color: var(--text); border-radius: 8px; padding: 5px 10px; cursor: pointer;
-    font-size: 11.5px; margin-bottom: 8px;
-  }
-  #geo-btn:hover { background: rgba(90, 130, 200, 0.5); }
-  .sky-summary { font-size: 12px; color: #b9c9e8; line-height: 1.5; padding-bottom: 8px; border-bottom: 1px solid rgba(120,170,255,.15); margin-bottom: 4px; }
-  .sky-row {
-    display: flex; justify-content: space-between; gap: 10px;
-    padding: 7px 0; border-bottom: 1px solid rgba(120,170,255,.1); font-size: 12.5px;
-  }
-  .sky-row .sky-name { font-weight: 600; }
-  .sky-detail { text-align: right; color: #8fa8d4; font-size: 11px; line-height: 1.4; }
-  .sky-up .sky-name { color: #7dedaa; }
-  .sky-down .sky-name { color: #8fa8d4; font-weight: 400; }
-
-  /* ---- Ciel de ta naissance ---- */
-  .birth-inputs { display: flex; gap: 6px; margin-bottom: 8px; }
-  .birth-inputs input {
-    background: rgba(0,0,0,.4); border: 1px solid var(--panel-border); color: var(--text);
-    border-radius: 8px; padding: 6px 8px; font-size: 12.5px; flex: 1; min-width: 0;
-    color-scheme: dark;
-  }
-  #birth-go, #light-launch, #lapse-btn {
-    background: var(--accent); border: none; color: #04122e; font-weight: 600;
-    border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 12.5px;
-    width: 100%; margin-bottom: 6px;
-  }
-  #birth-go:hover, #light-launch:hover, #lapse-btn:hover { filter: brightness(1.15); }
-  #lapse-btn { margin-top: 10px; }
-
-  /* ---- Course de la lumière ---- */
-  .light-speeds { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-  .light-speeds button.active { background: var(--accent); color: #04122e; font-weight: 600; }
-  #light-clock {
-    font-size: 20px; color: #ffe9a8; font-weight: 600;
-    font-variant-numeric: tabular-nums; margin: 4px 0 8px;
-  }
-  .light-row {
-    display: flex; justify-content: space-between; gap: 10px;
-    padding: 6px 0; border-bottom: 1px solid rgba(120,170,255,.1);
-    font-size: 12px; color: #8fa8d4;
-  }
-  .light-row.hit { color: #ffe9a8; }
-  .light-row.hit .light-name { color: #fff; font-weight: 600; }
-  #light-compare { font-size: 11.5px; color: #b9c9e8; line-height: 1.55; padding-top: 8px; }
-
-  /* ---- Légende Pale Blue Dot ---- */
-  #pbd-caption {
-    position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
-    max-width: 600px; width: calc(100vw - 40px); text-align: center;
-    display: none; z-index: 11;
-  }
-  #pbd-caption.visible { display: block; }
-  #pbd-caption .quote { font-style: italic; color: #dce8ff; font-size: 14px; line-height: 1.65; }
-  #pbd-caption .who { color: #8fa8d4; font-size: 12px; margin-top: 8px; }
-  #pbd-caption .pbd-hint { color: var(--accent); font-size: 11.5px; margin-top: 8px; }
-
-  /* ---- HUD du time-lapse de vie ---- */
-  #lapse-hud {
-    position: absolute; top: 46%; left: 50%; transform: translate(-50%, -50%);
-    text-align: center; display: none; z-index: 12; pointer-events: none;
-  }
-  #lapse-hud.visible { display: block; }
-  #lapse-year {
-    font-family: var(--font-display); font-size: 72px; font-weight: 600;
-    color: #fff; letter-spacing: 5px; text-shadow: 0 0 36px rgba(109, 180, 255, 0.6);
-  }
-  .lapse-stats { display: flex; gap: 14px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
-  .lapse-stat {
-    background: var(--panel-bg); border: 1px solid var(--panel-border);
-    border-radius: 10px; padding: 9px 16px; font-size: 12px; color: #b9c9e8;
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  }
-  .lapse-stat b { color: var(--accent); font-size: 18px; display: block; font-variant-numeric: tabular-nums; }
-  #lapse-end { margin-top: 14px; font-size: 15px; color: #ffe9a8; display: none; }
-  #lapse-close {
-    margin-top: 12px; pointer-events: auto;
-    background: rgba(60, 90, 150, 0.5); border: 1px solid var(--panel-border);
-    color: var(--text); padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 12px;
-  }
-  #lapse-close:hover { background: rgba(90, 130, 200, 0.6); }
-  .birth-line {
-    font-size: 12.5px; line-height: 1.55; color: #dce8ff;
-    padding: 7px 0; border-bottom: 1px solid rgba(120,170,255,.12);
-  }
-  .birth-line b { color: var(--accent); }
-
-  /* ---- Astuce en bas à droite ---- */
-  #hint {
-    bottom: 14px; right: 14px;
-    font-size: 11px; color: #8fa8d4; padding: 8px 12px;
-    max-width: 260px; line-height: 1.5;
-  }
-
-  /* ---- Étiquettes des astres (CSS2D) ---- */
-  .body-label {
-    color: #cfe0ff; font-size: 11.5px; font-family: inherit;
-    text-shadow: 0 0 6px #000, 0 0 3px #000;
-    cursor: pointer; pointer-events: auto;
-    padding: 2px 6px;
-    transition: color .15s;
-    user-select: none;
-  }
-  .body-label:hover { color: #fff; text-shadow: 0 0 8px var(--accent); }
-  .body-label.moon-label { font-size: 10px; color: #9fb4d8; }
-
-  #loading {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: #000; z-index: 100; color: var(--accent); font-size: 15px;
-    flex-direction: column; gap: 10px;
-  }
-
-  /* ---- Boutons flottants (mobile) ---- */
-  .fab {
-    display: none; position: absolute; z-index: 20;
-    width: 46px; height: 46px; border-radius: 50%;
-    background: var(--panel-bg); border: 1px solid var(--panel-border);
-    color: var(--text); font-size: 20px; cursor: pointer;
-    align-items: center; justify-content: center;
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  }
-  #nav-toggle { top: 14px; right: 14px; }
-  #time-toggle { bottom: 14px; right: 14px; }
-
-  /* ---- Adaptation smartphone ---- */
-  @media (max-width: 768px) {
-    .fab { display: flex; }
-
-    #topbar { max-width: calc(100vw - 84px); padding: 8px 12px; gap: 2px; }
-    #topbar h1 { font-size: 13px; letter-spacing: 1.5px; }
-    #sim-date { font-size: 11.5px; }
-    #live-badge { font-size: 10px; }
-
-    /* Le panneau de navigation devient un tiroir replié derrière ☰ */
-    #nav-panel { display: none; top: 68px; right: 10px; width: 220px;
-      max-height: calc(100vh - 150px); overflow-y: auto; }
-    #nav-panel.open { display: flex; }
-    #drift-note.visible { display: none; }
-
-    /* Les contrôles du temps se replient derrière ⏱ */
-    #time-controls { display: none; bottom: 70px; left: 8px; right: 8px;
-      transform: none; max-width: none; }
-    #time-controls.open { display: flex; }
-
-    /* Les fiches deviennent des feuilles en bas d'écran */
-    .side-panel { top: auto; bottom: 8px; left: 8px; right: 70px;
-      width: auto; max-height: 46vh; }
-
-    #hint { display: none; }
-    #pbd-caption { bottom: 70px; width: calc(100vw - 86px); }
-    #lapse-year { font-size: 44px; letter-spacing: 3px; }
-    .lapse-stats { gap: 8px; }
-    .lapse-stat { padding: 7px 10px; font-size: 11px; }
-    .lapse-stat b { font-size: 15px; }
-  }
-</style>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div id="loading">☀️ Chargement des textures NASA et calcul des positions…</div>
 
-  <button id="nav-toggle" class="fab" title="Menu">☰</button>
-  <button id="time-toggle" class="fab" title="Contrôle du temps">⏱</button>
+  <!-- Accueil : une seule action principale -->
+  <div id="welcome">
+    <div class="welcome-card">
+      <div class="welcome-kicker">Temps réel · Positions exactes</div>
+      <h1>Système <span>Solaire</span> 3D</h1>
+      <p>Les planètes là où elles sont vraiment en ce moment. Clique, voyage dans le temps, et plonge dans le cosmos — sans compte, sans pub.</p>
+      <div class="welcome-actions">
+        <button id="welcome-explore" type="button">🚀 Explorer</button>
+        <button id="welcome-discover" type="button">✨ Voir les découvertes</button>
+      </div>
+      <div class="welcome-hint">Glisser pour tourner · Molette pour zoomer · Clic sur un astre pour les détails</div>
+    </div>
+  </div>
+
+  <button id="nav-toggle" class="fab" title="Menu" type="button">☰</button>
+  <button id="time-toggle" class="fab" title="Contrôle du temps" type="button">⏱</button>
 
   <div id="topbar" class="panel">
     <h1>Système <span>Solaire</span> 3D</h1>
@@ -322,82 +59,134 @@
     <select id="goto-select">
       <option value="">🔭 Aller à…</option>
     </select>
-    <button id="overview-btn">🌌 Vue d'ensemble</button>
-    <button id="events-btn">📅 Événements à venir</button>
-    <button id="sky-btn">🌃 Ce soir dans le ciel</button>
-    <button id="birth-btn">🎂 Le ciel de ta naissance</button>
-    <button id="history-btn">📸 Moments historiques</button>
-    <button id="light-btn">🌟 Course de la lumière</button>
+    <button id="overview-btn" type="button">🌌 Vue d'ensemble</button>
+    <button id="discover-btn" type="button">✨ Découvrir</button>
     <hr>
     <label><input type="checkbox" id="toggle-orbits" checked> Orbites</label>
     <label><input type="checkbox" id="toggle-labels" checked> Étiquettes</label>
     <label><input type="checkbox" id="toggle-moons" checked> Lunes</label>
     <hr>
+    <label><input type="checkbox" id="toggle-scale"> 📏 Distances réelles</label>
+    <div id="scale-note">Distances Soleil–planètes à l’échelle (linéaires). Les tailles des astres restent exagérées — sinon tout disparaîtrait. Zoome et balade-toi dans le vide.</div>
     <label><input type="checkbox" id="toggle-drift"> 🌀 Dérive galactique</label>
     <div id="drift-note">Le Soleil file vers l'apex solaire (constellation d'Hercule) et les planètes tracent des hélices. Accélère le temps pour bien la voir !</div>
   </div>
 
+  <div id="scale-toast" aria-live="polite">
+    <div id="scale-toast-title">Distances réelles</div>
+    <div id="scale-toast-body">—</div>
+  </div>
+
   <div id="info-panel" class="panel side-panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <h2 id="info-name">—</h2>
     <div class="subtitle" id="info-type">—</div>
     <div class="desc" id="info-desc"></div>
     <table id="info-table"></table>
   </div>
 
+  <!-- Hub des expériences (onboarding simplifié) -->
+  <div id="discover-panel" class="panel side-panel">
+    <button class="panel-close" type="button">✕</button>
+    <h2>✨ Découvrir</h2>
+    <div class="panel-sub">Choisis une expérience — le reste du temps, explore librement</div>
+    <button class="discover-card" type="button" data-feature="events">
+      <span class="dc-icon">📅</span>
+      <span>
+        <div class="dc-title">Événements à venir</div>
+        <div class="dc-desc">Éclipses, oppositions, phases de Lune… téléporte-toi à la date exacte.</div>
+      </span>
+    </button>
+    <button class="discover-card" type="button" data-feature="sky">
+      <span class="dc-icon">🌃</span>
+      <span>
+        <div class="dc-title">Ce soir dans le ciel</div>
+        <div class="dc-desc">Quelles planètes sont visibles depuis ta position, en ce moment.</div>
+      </span>
+    </button>
+    <button class="discover-card" type="button" data-feature="birth">
+      <span class="dc-icon">🎂</span>
+      <span>
+        <div class="dc-title">Le ciel de ta naissance</div>
+        <div class="dc-desc">La disposition des planètes le jour où tu es né·e, puis rejoue ta vie en 15 s.</div>
+      </span>
+    </button>
+    <button class="discover-card" type="button" data-feature="history">
+      <span class="dc-icon">📸</span>
+      <span>
+        <div class="dc-title">Moments historiques</div>
+        <div class="dc-desc">Apollo 11, Voyager, Pale Blue Dot… revis les grandes dates.</div>
+      </span>
+    </button>
+    <button class="discover-card" type="button" data-feature="light">
+      <span class="dc-icon">🌟</span>
+      <span>
+        <div class="dc-title">Course de la lumière</div>
+        <div class="dc-desc">Lance un photon depuis le Soleil et regarde le temps qu’il lui faut.</div>
+      </span>
+    </button>
+    <button class="discover-card" type="button" data-feature="scale">
+      <span class="dc-icon">📏</span>
+      <span>
+        <div class="dc-title">Distances réelles</div>
+        <div class="dc-desc">Regarde le système solaire s’étirer à l’échelle — et mesure le vide entre les planètes.</div>
+      </span>
+    </button>
+  </div>
+
   <div id="events-panel" class="panel side-panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <h2>📅 Événements à venir</h2>
     <div class="panel-sub" id="events-from">—</div>
     <div id="events-list"></div>
   </div>
 
   <div id="sky-panel" class="panel side-panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <h2>🌃 Ce soir dans le ciel</h2>
     <div class="panel-sub" id="sky-location">—</div>
-    <button id="geo-btn">📍 Utiliser ma position</button>
+    <button id="geo-btn" type="button">📍 Utiliser ma position</button>
     <div id="sky-summary" class="sky-summary"></div>
     <div id="sky-list"></div>
   </div>
 
   <div id="birth-panel" class="panel side-panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <h2>🎂 Le ciel de ta naissance</h2>
     <div class="panel-sub">Choisis ta date de naissance (et l'heure si tu la connais)</div>
     <div class="birth-inputs">
       <input type="date" id="birth-date">
       <input type="time" id="birth-time" value="12:00">
     </div>
-    <button id="birth-go">✨ Voir mon ciel</button>
+    <button id="birth-go" type="button">✨ Voir mon ciel</button>
     <div id="birth-result"></div>
   </div>
 
   <div id="history-panel" class="panel side-panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <h2>📸 Moments historiques</h2>
     <div class="panel-sub">Revis les grandes dates de l'aventure spatiale</div>
     <div id="history-list"></div>
   </div>
 
   <div id="light-panel" class="panel side-panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <h2>🌟 La course de la lumière</h2>
     <div class="panel-sub">La lumière file à 299 792 km/s — et pourtant, regarde le temps qu'il lui faut…</div>
     <div class="light-speeds">
-      <button data-lspeed="1">Temps réel</button>
-      <button data-lspeed="60" class="active">×60</button>
-      <button data-lspeed="600">×600</button>
-      <button data-lspeed="3600">×3600</button>
+      <button type="button" data-lspeed="1">Temps réel</button>
+      <button type="button" data-lspeed="60" class="active">×60</button>
+      <button type="button" data-lspeed="600">×600</button>
+      <button type="button" data-lspeed="3600">×3600</button>
     </div>
-    <button id="light-launch">☀️ Lancer le photon</button>
+    <button id="light-launch" type="button">☀️ Lancer le photon</button>
     <div id="light-clock">—</div>
     <div id="light-list"></div>
     <div id="light-compare"></div>
   </div>
 
   <div id="pbd-caption" class="panel">
-    <button class="panel-close">✕</button>
+    <button class="panel-close" type="button">✕</button>
     <div class="quote">« Regardez encore ce point. C'est ici. C'est notre foyer. C'est nous. Tous ceux que vous aimez, tous ceux que vous connaissez, tous les êtres humains qui aient jamais vécu y ont passé leur vie. »</div>
     <div class="who">— Carl Sagan, à propos de cette photo prise par Voyager 1 le 14 février 1990, à 6 milliards de km</div>
     <div class="pbd-hint">Tu es à la position réelle de Voyager 1 ce jour-là. Le point pâle étiqueté « Terre », c'est nous. 🖱️ Zoome et regarde autour de toi.</div>
@@ -411,26 +200,26 @@
       <div class="lapse-stat"><b id="lapse-gal">0</b>milliards de km dans la galaxie</div>
     </div>
     <div id="lapse-end">✨ …et l'aventure continue aujourd'hui !</div>
-    <button id="lapse-close">✕ Fermer</button>
+    <button id="lapse-close" type="button">✕ Fermer</button>
   </div>
 
   <div id="time-controls" class="panel">
-    <button data-speed="0">⏸</button>
-    <button data-speed="1" class="active">▶ Temps réel</button>
-    <button data-speed="60">1s = 1min</button>
-    <button data-speed="3600">1s = 1h</button>
-    <button data-speed="86400">1s = 1j</button>
-    <button data-speed="604800">1s = 1sem</button>
-    <button data-speed="2629800">1s = 1mois</button>
-    <button data-speed="31557600">1s = 1an</button>
-    <button id="reverse-btn" title="Inverser le sens du temps">⏪</button>
-    <button id="now-btn">📍 Maintenant</button>
+    <button type="button" data-speed="0">⏸</button>
+    <button type="button" data-speed="1" class="active">▶ Temps réel</button>
+    <button type="button" data-speed="60">1s = 1min</button>
+    <button type="button" data-speed="3600">1s = 1h</button>
+    <button type="button" data-speed="86400">1s = 1j</button>
+    <button type="button" data-speed="604800">1s = 1sem</button>
+    <button type="button" data-speed="2629800">1s = 1mois</button>
+    <button type="button" data-speed="31557600">1s = 1an</button>
+    <button id="reverse-btn" type="button" title="Inverser le sens du temps">⏪</button>
+    <button id="now-btn" type="button">📍 Maintenant</button>
     <input type="datetime-local" id="date-input">
-    <button id="go-date-btn">Aller</button>
+    <button id="go-date-btn" type="button">Aller</button>
   </div>
 
   <div id="hint" class="panel">
-    🖱️ <b>Glisser</b> : tourner · <b>Molette</b> : zoomer · <b>Clic droit</b> : déplacer · <b>Clic sur un astre</b> : zoom + détails
+    🖱️ <b>Glisser</b> : tourner · <b>Molette</b> : zoomer · <b>Clic droit</b> : déplacer · <b>Clic sur un astre</b> : détails · <b>✨ Découvrir</b> : expériences
   </div>
 
   <script src="libs/astronomy.browser.min.js"></script>
