@@ -198,6 +198,49 @@ export function bodyTexture(key) {
   return makeTexture(512, 256, gen);
 }
 
+// Carte nocturne procédurale déterministe : foyers urbains stylisés placés sur
+// les principaux bassins de population. Aucun téléchargement supplémentaire.
+export function earthNightTexture(size = 1024) {
+  const hubs = [
+    [-74, 40.7, 45, 4], [-118.2, 34, 28, 5], [-87.6, 41.9, 26, 4],
+    [-99.1, 19.4, 28, 5], [-46.6, -23.6, 34, 6], [-58.4, -34.6, 20, 4],
+    [2.35, 48.9, 48, 4], [9.2, 45.5, 42, 4], [30.5, 50.4, 28, 5],
+    [31.2, 30, 22, 4], [28, -26.2, 22, 5], [77.2, 28.6, 55, 6],
+    [72.9, 19.1, 44, 5], [90.4, 23.8, 28, 5], [116.4, 39.9, 58, 5],
+    [121.5, 31.2, 48, 4], [139.7, 35.7, 58, 4], [127, 37.5, 38, 4],
+    [106.8, -6.2, 34, 6], [151.2, -33.9, 22, 5], [144.9, -37.8, 16, 4],
+  ];
+
+  let seed = 0x51f15e;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0x100000000;
+  };
+  const normalish = () => (random() + random() + random() - 1.5) / 1.5;
+
+  const texture = makeTexture(size, size / 2, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const [lon, lat, count, spread] of hubs) {
+      for (let i = 0; i < count * 3; i++) {
+        const pxLon = lon + normalish() * spread;
+        const pxLat = lat + normalish() * spread * 0.55;
+        const x = (((pxLon + 180) / 360) * w + w) % w;
+        const y = ((90 - pxLat) / 180) * h;
+        const radius = 0.22 + random() * 0.58;
+        const alpha = 0.12 + random() * 0.38;
+        ctx.fillStyle = `rgba(255, ${155 + Math.round(random() * 65)}, 90, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  });
+  texture.anisotropy = 2;
+  return texture;
+}
+
 // Panorama réel de la Voie lactée en toile de fond
 export function milkyWayTexture() {
   const t = realTexture('textures/2k_stars_milky_way.jpg');
@@ -225,10 +268,11 @@ export function ringTexture(faint = false) {
 export function glowTexture() {
   return makeTexture(256, 256, (ctx, w, h) => {
     const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-    g.addColorStop(0, 'rgba(255,230,160,1)');
-    g.addColorStop(0.25, 'rgba(255,180,80,0.55)');
-    g.addColorStop(0.6, 'rgba(255,140,40,0.15)');
-    g.addColorStop(1, 'rgba(255,120,20,0)');
+    g.addColorStop(0, 'rgba(255,255,238,0.95)');
+    g.addColorStop(0.16, 'rgba(255,235,180,0.72)');
+    g.addColorStop(0.44, 'rgba(255,177,82,0.28)');
+    g.addColorStop(0.72, 'rgba(255,122,35,0.055)');
+    g.addColorStop(1, 'rgba(255,100,20,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
   });

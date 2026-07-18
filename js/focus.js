@@ -18,6 +18,41 @@ const _delta = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _desired = new THREE.Vector3();
 const _overviewCam = new THREE.Vector3();
+const _curvePoint = new THREE.Vector3();
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let focusMove = null;
+let overviewMove = null;
+
+const cinematicEase = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+
+function beginFocusMove(body, duration = 1.45) {
+  body.group.getWorldPosition(_wp);
+  _dir.copy(camera.position).sub(_wp);
+  if (_dir.lengthSq() < 0.001) _dir.set(0.4, 0.25, 1);
+  const desired = Math.max(body.data.displayR * 6, 3.5);
+  _desired.copy(_wp).addScaledVector(_dir.normalize(), desired);
+  const travelDistance = camera.position.distanceTo(_desired);
+  const control = camera.position.clone().lerp(_desired, 0.5);
+  control.y += Math.min(130, Math.max(8, travelDistance * 0.18));
+  focusMove = {
+    body,
+    duration: reducedMotion ? 0.15 : duration,
+    elapsed: 0,
+    startCamera: camera.position.clone(),
+    startTarget: controls.target.clone(),
+    direction: _dir.clone(),
+    control,
+  };
+}
+
+function beginOverviewMove(duration = 1.75) {
+  overviewMove = {
+    duration: reducedMotion ? 0.15 : duration,
+    elapsed: 0,
+    startCamera: camera.position.clone(),
+    startTarget: controls.target.clone(),
+  };
+}
 
 const infoPanel = leftPanels.info;
 const infoTable = document.getElementById('info-table');
@@ -88,9 +123,11 @@ export function updateLiveRows(body) {
 export function focusBody(body) {
   hidePBD();
   sim.followBody = body;
-  sim.focusTimer = 1.3;
+  sim.focusTimer = reducedMotion ? 0.15 : 1.45;
   sim.overviewTimer = 0;
+  overviewMove = null;
   body.group.getWorldPosition(prevFollowPos);
+  beginFocusMove(body, sim.focusTimer);
   controls.minDistance = Math.max(body.data.displayR * 1.5, 0.5);
   gotoSelect.value = body.data.key;
 }
@@ -106,7 +143,9 @@ export function goOverview() {
   sim.followBody = null;
   sim.selectedBody = null;
   sim.focusTimer = 0;
-  sim.overviewTimer = 1.6;
+  sim.overviewTimer = reducedMotion ? 0.15 : 1.75;
+  focusMove = null;
+  beginOverviewMove(sim.overviewTimer);
   controls.minDistance = 2;
   infoPanel.classList.remove('visible');
   sim.liveRows = null;
@@ -116,22 +155,37 @@ export function goOverview() {
 export function tickCamera(dt, systemGroup) {
   if (sim.followBody) {
     sim.followBody.group.getWorldPosition(_wp);
-    _delta.copy(_wp).sub(prevFollowPos);
-    camera.position.add(_delta);
-    controls.target.copy(_wp);
-    prevFollowPos.copy(_wp);
     if (sim.focusTimer > 0) {
-      sim.focusTimer -= dt;
+      if (!focusMove || focusMove.body !== sim.followBody) beginFocusMove(sim.followBody, sim.focusTimer);
+      sim.focusTimer = Math.max(0, sim.focusTimer - dt);
+      focusMove.elapsed += dt;
+      const k = cinematicEase(Math.min(focusMove.elapsed / focusMove.duration, 1));
       const desired = Math.max(sim.followBody.data.displayR * 6, 3.5);
-      _dir.copy(camera.position).sub(_wp).normalize();
-      _desired.copy(_wp).addScaledVector(_dir, desired);
-      camera.position.lerp(_desired, 0.06);
+      _desired.copy(_wp).addScaledVector(focusMove.direction, desired);
+      const inv = 1 - k;
+      _curvePoint.copy(focusMove.startCamera).multiplyScalar(inv * inv)
+        .addScaledVector(focusMove.control, 2 * inv * k)
+        .addScaledVector(_desired, k * k);
+      camera.position.copy(_curvePoint);
+      controls.target.lerpVectors(focusMove.startTarget, _wp, k);
+      if (sim.focusTimer === 0) focusMove = null;
+    } else {
+      _delta.copy(_wp).sub(prevFollowPos);
+      camera.position.add(_delta);
+      controls.target.copy(_wp);
     }
+    prevFollowPos.copy(_wp);
   } else if (sim.overviewTimer > 0) {
-    sim.overviewTimer -= dt;
-    controls.target.lerp(systemGroup.position, 0.05);
+    if (!overviewMove || sim.overviewTimer > overviewMove.duration + 0.05) {
+      beginOverviewMove(sim.overviewTimer);
+    }
+    sim.overviewTimer = Math.max(0, sim.overviewTimer - dt);
+    overviewMove.elapsed += dt;
+    const k = cinematicEase(Math.min(overviewMove.elapsed / overviewMove.duration, 1));
     overviewCamPosition(_overviewCam).add(systemGroup.position);
-    camera.position.lerp(_overviewCam, 0.05);
+    camera.position.lerpVectors(overviewMove.startCamera, _overviewCam, k);
+    controls.target.lerpVectors(overviewMove.startTarget, systemGroup.position, k);
+    if (sim.overviewTimer === 0) overviewMove = null;
   }
 }
 

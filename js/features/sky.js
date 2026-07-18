@@ -4,7 +4,7 @@ import { skyReport } from '../planetarium.js';
 import { sim } from '../sim.js';
 import { showLeftPanel, leftPanels } from '../panels.js';
 
-export let skyCoords = { lat: 43.61, lon: 3.88, label: 'Montpellier (par défaut)' };
+export let skyCoords = { lat: 46.39, lon: 6.86, label: 'Le Bouveret (par défaut)' };
 try {
   const saved = JSON.parse(localStorage.getItem('skyCoords'));
   if (saved && Number.isFinite(saved.lat) && Number.isFinite(saved.lon)) skyCoords = saved;

@@ -7,7 +7,7 @@ import { clearTrails } from './trails.js';
 import { goOverview } from './focus.js';
 import { overviewCamPosition } from './scale.js';
 
-const SCALE_ANIM_DUR = 2.8;
+const SCALE_ANIM_DUR = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.15 : 2.8;
 
 const TOAST_LINES_ON = [
   { at: 0,    title: 'Distances réelles', body: 'Les orbites s’étirent à leur vraie proportion…' },

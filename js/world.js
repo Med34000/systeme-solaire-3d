@@ -3,12 +3,15 @@
 import * as THREE from 'three';
 import { CSS2DObject } from '../libs/CSS2DRenderer.js';
 import { SUN, PLANETS, MOONS, AU_KM } from './data.js';
-import { bodyTexture, ringTexture, glowTexture, starSpriteTexture } from './textures.js';
+import {
+  bodyTexture, earthNightTexture, ringTexture, glowTexture, starSpriteTexture,
+} from './textures.js';
 import { VOYAGERS, voyagerPosition, voyagerPath } from './spacecraft.js';
 import { buildISS, buildVoyager } from './models.js';
 import { A, eqjToEclVec } from './coords.js';
 import { scaleDist, moonOrbitUnits } from './scale.js';
 import { systemGroup } from './scene.js';
+import { QUALITY } from './quality.js';
 
 export const bodies = [];
 export const bodyByKey = new Map();
@@ -23,6 +26,103 @@ let _onSelectBody = () => {};
 export function setSelectBodyHandler(fn) { _onSelectBody = fn; }
 
 const _lookTarget = new THREE.Vector3();
+const _sunDirection = new THREE.Vector3(1, 0, 0);
+let earthNightMaterial = null;
+let earthAtmosphereMaterial = null;
+const sunGlowLayers = [];
+
+function atmosphereMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      glowColor: { value: new THREE.Color(0x55b7ff) },
+      sunDirection: { value: _sunDirection.clone() },
+    },
+    vertexShader: `
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      void main() {
+        vWorldNormal = normalize(mat3(modelMatrix) * normal);
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 glowColor;
+      uniform vec3 sunDirection;
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      void main() {
+        vec3 normal = normalize(vWorldNormal);
+        vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+        float rim = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.6);
+        float daylight = smoothstep(-0.45, 0.55, dot(normal, normalize(sunDirection)));
+        float alpha = rim * mix(0.22, 0.82, daylight);
+        gl_FragColor = vec4(glowColor * (0.7 + daylight * 0.45), alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    toneMapped: false,
+  });
+}
+
+function nightLightsMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      lightsMap: { value: earthNightTexture(QUALITY.tier === 'high' ? 1024 : 512) },
+      sunDirection: { value: _sunDirection.clone() },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      varying vec3 vWorldNormal;
+      void main() {
+        vUv = uv;
+        vWorldNormal = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D lightsMap;
+      uniform vec3 sunDirection;
+      varying vec2 vUv;
+      varying vec3 vWorldNormal;
+      void main() {
+        float night = smoothstep(0.12, -0.30, dot(normalize(vWorldNormal), normalize(sunDirection)));
+        vec4 lights = texture2D(lightsMap, vUv);
+        float alpha = lights.a * night * 0.88;
+        gl_FragColor = vec4(lights.rgb * night, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
+function addEarthEffects(body) {
+  if (QUALITY.atmosphere) {
+    earthAtmosphereMaterial = atmosphereMaterial();
+    const atmosphere = new THREE.Mesh(
+      new THREE.SphereGeometry(body.data.displayR * 1.065, ...QUALITY.planetSegments),
+      earthAtmosphereMaterial,
+    );
+    atmosphere.renderOrder = 2;
+    body.tiltGroup.add(atmosphere);
+  }
+  if (QUALITY.nightLights) {
+    earthNightMaterial = nightLightsMaterial();
+    const lights = new THREE.Mesh(
+      new THREE.SphereGeometry(body.data.displayR * 1.006, ...QUALITY.planetSegments),
+      earthNightMaterial,
+    );
+    lights.renderOrder = 3;
+    body.mesh.add(lights);
+  }
+}
 
 function makeLabel(text, isMoon, body) {
   const div = document.createElement('div');
@@ -47,13 +147,14 @@ function buildBody(data, { isMoon = false, parentBody = null } = {}) {
     const mat = isSun
       ? new THREE.MeshBasicMaterial({ map: bodyTexture('Sun') })
       : new THREE.MeshLambertMaterial({ map: bodyTexture(data.key) });
-    const segs = isMoon ? [32, 24] : [64, 48];
+    const segs = isMoon ? QUALITY.moonSegments : QUALITY.planetSegments;
     mesh = new THREE.Mesh(new THREE.SphereGeometry(data.displayR, segs[0], segs[1]), mat);
   }
   tiltGroup.add(mesh);
 
   const body = { data, group, tiltGroup, mesh, isMoon, parentBody, spinRate: 0 };
   if (data.rotHours) body.spinRate = (2 * Math.PI) / (data.rotHours * 3600);
+  if (data.key === 'Earth') addEarthEffects(body);
 
   const label = makeLabel(data.name, isMoon, body);
   label.position.set(0, data.displayR + (isMoon ? 0.9 : 2.2), 0);
@@ -76,16 +177,23 @@ function buildBody(data, { isMoon = false, parentBody = null } = {}) {
   if (data.hasRings) {
     const faint = data.hasRings === 'faint';
     const inner = data.displayR * 1.35, outer = data.displayR * 2.35;
-    const geo = new THREE.RingGeometry(inner, outer, 128, 1);
+    const geo = new THREE.RingGeometry(inner, outer, QUALITY.ringSegments, 1);
     const p = geo.attributes.position, uv = geo.attributes.uv;
     for (let i = 0; i < p.count; i++) {
       const r = Math.hypot(p.getX(i), p.getY(i));
       uv.setXY(i, (r - inner) / (outer - inner), 0.5);
     }
     geo.rotateX(-Math.PI / 2);
-    tiltGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      map: ringTexture(faint), side: THREE.DoubleSide, transparent: true, depthWrite: false,
-    })));
+    const map = ringTexture(faint);
+    const ring = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
+      map, side: THREE.DoubleSide, transparent: true, depthWrite: false,
+      opacity: faint ? 0.55 : 0.96, alphaTest: faint ? 0 : 0.015,
+      emissive: faint ? 0x1c252b : 0x887865,
+      emissiveMap: map,
+      emissiveIntensity: faint ? 0.18 : 0.74,
+    }));
+    ring.renderOrder = 1;
+    tiltGroup.add(ring);
   }
 
   bodies.push(body);
@@ -98,16 +206,33 @@ export const sunBody = buildBody(SUN);
 systemGroup.add(sunBody.group);
 {
   const glowMap = glowTexture();
-  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowMap, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
-  }));
-  glow.scale.setScalar(SUN.displayR * 7);
-  sunBody.group.add(glow);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowMap, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.35,
-  }));
-  halo.scale.setScalar(SUN.displayR * 16);
-  sunBody.group.add(halo);
+  const configs = [
+    { scale: 4.4, color: 0xfff5d2, opacity: 0.88, speed: 0.55 },
+    { scale: 8.5, color: 0xffb45f, opacity: 0.34, speed: 0.31 },
+    { scale: 15.5, color: 0xff7b35, opacity: 0.11, speed: 0.19 },
+  ].slice(0, QUALITY.sunGlowLayers);
+  for (const config of configs) {
+    const material = new THREE.SpriteMaterial({
+      map: glowMap, color: config.color, opacity: config.opacity,
+      blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
+      toneMapped: false,
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.userData.glow = { ...config, baseScale: SUN.displayR * config.scale };
+    sprite.scale.setScalar(sprite.userData.glow.baseScale);
+    sunBody.group.add(sprite);
+    sunGlowLayers.push(sprite);
+  }
+}
+
+export function tickWorldVisuals(elapsed) {
+  for (let i = 0; i < sunGlowLayers.length; i++) {
+    const sprite = sunGlowLayers[i];
+    const cfg = sprite.userData.glow;
+    const pulse = 1 + Math.sin(elapsed * cfg.speed + i * 1.7) * 0.012;
+    sprite.scale.setScalar(cfg.baseScale * pulse);
+    sprite.material.opacity = cfg.opacity * (0.96 + Math.sin(elapsed * cfg.speed * 1.3 + i) * 0.04);
+  }
 }
 
 for (const p of PLANETS) {
@@ -279,6 +404,13 @@ export function updatePositions(date) {
     const r = Math.hypot(ecl.x, ecl.y, ecl.z);
     const k = scaleDist(r) / r;
     b.group.position.set(ecl.x * k, ecl.z * k, -ecl.y * k);
+  }
+
+  const earth = bodyByKey.get('Earth');
+  if (earth) {
+    _sunDirection.copy(earth.group.position).multiplyScalar(-1).normalize();
+    earthNightMaterial?.uniforms.sunDirection.value.copy(_sunDirection);
+    earthAtmosphereMaterial?.uniforms.sunDirection.value.copy(_sunDirection);
   }
 
   let jmCache = null;

@@ -43,21 +43,39 @@ export function setupPanelCloses() {
 export function setupMobileDrawers() {
   const navPanelEl = document.getElementById('nav-panel');
   const timePanelEl = document.getElementById('time-controls');
+  const navToggle = document.getElementById('nav-toggle');
+  const timeToggle = document.getElementById('time-toggle');
 
-  document.getElementById('nav-toggle').addEventListener('click', () => {
+  const syncDrawerState = () => {
+    const navOpen = navPanelEl.classList.contains('open');
+    const timeOpen = timePanelEl.classList.contains('open');
+    navToggle.setAttribute('aria-expanded', String(navOpen));
+    navToggle.setAttribute('aria-label', navOpen ? 'Fermer le menu' : 'Ouvrir le menu');
+    timeToggle.setAttribute('aria-expanded', String(timeOpen));
+    timeToggle.setAttribute('aria-label', timeOpen
+      ? 'Fermer les contrôles du temps'
+      : 'Ouvrir les contrôles du temps');
+  };
+
+  navToggle.addEventListener('click', () => {
     navPanelEl.classList.toggle('open');
     timePanelEl.classList.remove('open');
+    syncDrawerState();
   });
-  document.getElementById('time-toggle').addEventListener('click', () => {
+  timeToggle.addEventListener('click', () => {
     timePanelEl.classList.toggle('open');
     navPanelEl.classList.remove('open');
+    syncDrawerState();
     if (timePanelEl.classList.contains('open') && matchMedia('(max-width: 768px)').matches) {
       showLeftPanel('');
     }
   });
 
   const closeNavDrawer = () => {
-    if (matchMedia('(max-width: 768px)').matches) navPanelEl.classList.remove('open');
+    if (matchMedia('(max-width: 768px)').matches) {
+      navPanelEl.classList.remove('open');
+      syncDrawerState();
+    }
   };
   navPanelEl.querySelectorAll('button').forEach((b) => b.addEventListener('click', closeNavDrawer));
   document.getElementById('goto-select').addEventListener('change', closeNavDrawer);

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { OrbitControls } from '../libs/OrbitControls.js';
 import { CSS2DRenderer } from '../libs/CSS2DRenderer.js';
 import { milkyWayTexture, starSpriteTexture } from './textures.js';
+import { QUALITY } from './quality.js';
 
 import { DEFAULT_OVERVIEW_CAM } from './scale.js';
 
@@ -18,7 +19,9 @@ camera.position.copy(DEFAULT_CAM);
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY.pixelRatio));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
 document.body.appendChild(renderer.domElement);
 
 export const labelRenderer = new CSS2DRenderer();
@@ -47,7 +50,7 @@ systemGroup.add(sunLight);
 
 // Champ d'étoiles (coquille sphérique)
 {
-  const N = 4500;
+  const N = QUALITY.starCount;
   const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
   const tints = [[1, 1, 1], [0.8, 0.87, 1], [1, 0.92, 0.8], [1, 0.85, 0.85], [0.85, 1, 0.95]];
   for (let i = 0; i < N; i++) {
@@ -71,6 +74,7 @@ export function setupResize() {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY.pixelRatio));
     labelRenderer.setSize(innerWidth, innerHeight);
   });
 }

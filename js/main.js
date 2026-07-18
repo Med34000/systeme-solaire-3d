@@ -7,7 +7,7 @@ import {
   scene, camera, renderer, labelRenderer, controls, systemGroup, setupResize,
 } from './scene.js';
 import {
-  bodies, voyagerBodies, buildOrbits, updatePositions, setupDisplayToggles,
+  bodies, voyagerBodies, buildOrbits, updatePositions, setupDisplayToggles, tickWorldVisuals,
 } from './world.js';
 import { loadingManager } from './textures.js';
 import {
@@ -24,6 +24,8 @@ import { setupSky, isSkyPanelVisible, renderSky } from './features/sky.js';
 import { setupBirth, updateLapseHud } from './features/birth.js';
 import { setupOnboarding } from './onboarding.js';
 import { setupScaleMode, tickScale } from './scale-mode.js';
+import { setupQualityBadge } from './quality.js';
+import { updateSmartLabels } from './labels.js';
 
 // ---------- Initialisation ----------
 setupResize();
@@ -42,6 +44,7 @@ setupLightRace();
 setupSky();
 setupBirth();
 setupOnboarding();
+setupQualityBadge();
 
 // Chargement des textures
 const loadingEl = document.getElementById('loading');
@@ -52,7 +55,9 @@ setTimeout(() => loadingEl.remove(), 8000);
 const clock = new THREE.Clock();
 let liveRowTimer = 0;
 let skyTimer = 0;
+let labelTimer = 0;
 let lastSimMs = NaN;
+let positionTimer = Infinity;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -62,8 +67,13 @@ function animate() {
   tickTime(dt, { onLapseHud: updateLapseHud });
   const scaleMoved = tickScale(dt);
   const simMs = sim.date.getTime();
-  if (scaleMoved || simMs !== lastSimMs) {
+  positionTimer += dt;
+  const positionInterval = (sim.lapse || Math.abs(sim.speed) >= 86400)
+    ? 0
+    : (Math.abs(sim.speed) >= 3600 ? 0.05 : 0.2);
+  if (scaleMoved || (simMs !== lastSimMs && positionTimer >= positionInterval)) {
     lastSimMs = simMs;
+    positionTimer = 0;
     updatePositions(sim.date);
   }
 
@@ -72,6 +82,7 @@ function animate() {
 
   // Balises Voyager
   const elapsed = clock.elapsedTime;
+  tickWorldVisuals(elapsed);
   for (let i = 0; i < voyagerBodies.length; i++) {
     const vb = voyagerBodies[i];
     if (vb.group.visible) vb.beacon.scale.setScalar(0.022 * (1 + 0.2 * Math.sin(elapsed * 2.2 + i * 2)));
@@ -100,6 +111,12 @@ function animate() {
   if (isSkyPanelVisible()) {
     skyTimer += dt;
     if (skyTimer > 2) { skyTimer = 0; renderSky(); }
+  }
+
+  labelTimer += dt;
+  if (labelTimer > 0.14) {
+    labelTimer = 0;
+    updateSmartLabels(camera);
   }
 
   controls.update();

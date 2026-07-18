@@ -1,0 +1,9 @@
+{
+  "name": "systeme-solaire-3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Simulation pédagogique du système solaire en Three.js",
+  "scripts": {
+    "test": "node --no-warnings --experimental-vm-modules --test tests/*.test.cjs"
+  }
+}
