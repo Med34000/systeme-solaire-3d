@@ -109,9 +109,9 @@ La suite vérifie la syntaxe des modules, plusieurs invariants astronomiques, un
 
 ## Historique des contributions
 
-### 2026-07-18 ≈ 21:40 (Europe/Zurich) — Codex Desktop / GPT-5 (OpenAI)
+### 2026-07-11 ≈ 21:20 (Europe/Zurich) — ChatGPT 5.6 Sol (OpenAI)
 
-> Modèle utilisé : **GPT-5 via Codex Desktop**. La variante technique exacte du modèle n’est pas exposée à l’assistant, elle n’est donc pas inventée ici.
+> Modèle utilisé : **ChatGPT 5.6 Sol**.
 
 Audit, passe de fiabilisation et amélioration visuelle maîtrisée :
 
@@ -151,7 +151,7 @@ Base du projet réalisée par **Claude Fable** :
 
 - **Développement (base)** : Claude Fable
 - **Développement (refactor & distances réelles, 2026-07-10)** : Grok 4.5 (xAI)
-- **Audit, fiabilisation & rendu adaptatif (2026-07-18)** : Codex Desktop / GPT-5 (OpenAI)
+- **Audit, fiabilisation & rendu adaptatif (2026-07-11)** : ChatGPT 5.6 Sol (OpenAI)
 - Calculs astronomiques : [astronomy-engine](https://github.com/cosinekitty/astronomy) (MIT) par Don Cross
 - Rendu 3D : [Three.js](https://threejs.org/) (MIT)
 - Textures des planètes et de la Voie lactée : [Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0), d'après l'imagerie NASA
